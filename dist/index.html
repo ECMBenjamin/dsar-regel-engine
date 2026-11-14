@@ -1,0 +1,2862 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DSAR Regel-Engine – Powered by Universal Rules Infrastructure</title>
+
+    <!-- JSON-LD: WebApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "DSAR Regel-Engine",
+      "alternateName": "Universal Rules Infrastructure – Domain Rule Pack DSGVO",
+      "description": "Deterministische Regel-Engine für DSGVO-Betroffenenanfragen (Art. 15, 17, 12 Abs. 3). Strikte Trennung von Rulebook (Policy), Engine (Entscheidung) und Action (Durchsetzung). 100% Local-First.",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+      "license": "https://opensource.org/licenses/MIT",
+      "featureList": [
+        "Rulebook als reines Datenobjekt (Policy as Data)",
+        "Universal Rules Engine: Permitted / Blocked / Manual Review",
+        "Hybrid-Workflow: Smart Ingestion & Strict-Gate-Prüfung",
+        "BGB-Fristenrechner mit Feiertagslogik",
+        "SHA-256 Audit Trail",
+        "Dokumentengenerierung als freigegebene Action (Art. 15 a-h, Art. 17)",
+        "Maschinenlesbarer Evaluation State (MCP/API-Mockup)"
+      ]
+    }
+    </script>
+
+    <style>
+/* --- QUIET LUXURY DESIGN SYSTEM --- */
+:root {
+    --color-primary: #1a3d6b;
+    --color-primary-hover: #122b4d;
+    --color-bg: #FBFBFB;
+    --color-surface: #FFFFFF;
+    --color-border: #E5E7EB;
+    --color-text-main: #111827;
+    --color-text-muted: #4B5563;
+    --color-success: #15803D;
+    --color-success-bg: #DCFCE7;
+    --color-warning: #B45309;
+    --color-warning-bg: #FEF3C7;
+    --color-danger: #B91C1C;
+    --color-danger-bg: #FEE2E2;
+    --color-code-bg: #0f172a;
+    --color-code-text: #e2e8f0;
+    --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --radius: 8px;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+* { box-sizing: border-box; }
+body { font-family: var(--font-sans); background-color: var(--color-bg); color: var(--color-text-main); line-height: 1.6; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+
+/* Typography */
+h1, h2, h3, h4 { color: var(--color-primary); margin-top: 0; font-weight: 600; letter-spacing: -0.02em; }
+h1 { font-size: 2.25rem; margin-bottom: 4px; }
+h2 { font-size: 1.5rem; margin-bottom: 16px; border-bottom: 1px solid var(--color-border); padding-bottom: 12px; }
+h3 { font-size: 1.1rem; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); }
+h4 { font-size: 1rem; margin-bottom: 8px; }
+p { margin-top: 0; margin-bottom: 16px; }
+a { color: var(--color-primary); text-decoration: none; font-weight: 500; }
+a:hover { text-decoration: underline; }
+code { font-family: var(--font-mono); font-size: 0.85em; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; padding: 1px 5px; }
+
+/* Header / Branding */
+header { margin-bottom: 40px; }
+.brand-subtitle { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--color-primary); margin-bottom: 12px; }
+.lead { color: var(--color-text-muted); font-size: 1.1rem; margin-bottom: 12px; }
+.header-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Layout & Navigation */
+nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; border-bottom: 1px solid var(--color-border); padding-bottom: 16px; }
+nav button { background: none; border: none; color: var(--color-text-muted); font-weight: 600; font-size: 0.95rem; cursor: pointer; padding: 10px 16px; border-radius: var(--radius); transition: all 0.2s; white-space: nowrap; font-family: inherit; }
+nav button:hover { background: var(--color-border); color: var(--color-text-main); }
+nav button.active { background: var(--color-primary); color: white; }
+
+section { display: none; animation: fadeIn 0.3s ease-in-out; }
+section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { section { animation: none; } * { transition: none !important; } }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.grid-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; }
+.grid-2 > *, .grid-3 > * { min-width: 0; }
+@media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+/* Cards & Panels */
+.card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 32px; margin-bottom: 24px; box-shadow: var(--shadow-sm); }
+@media (max-width: 768px) { .card { padding: 20px; } }
+.why-box { background: #f8fafc; border-left: 4px solid var(--color-primary); padding: 16px; margin-top: 16px; border-radius: 0 var(--radius) var(--radius) 0; font-size: 0.9rem; }
+.why-box h4 { margin-bottom: 8px; font-size: 0.95rem; }
+.why-box p { margin-bottom: 8px; }
+.why-box p:last-child { margin-bottom: 0; }
+.quote { font-style: italic; color: var(--color-text-muted); border-left: 2px solid var(--color-border); padding-left: 12px; margin-top: 8px; }
+.reasoning-box { background: var(--color-surface); border: 1px solid var(--color-border); border-left: 4px solid var(--color-success); padding: 16px; margin-top: 16px; border-radius: var(--radius); font-size: 0.9rem; }
+.reasoning-box ul { margin: 8px 0 0; padding-left: 20px; }
+.rule-id { display: inline-block; font-family: var(--font-mono); font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; padding: 1px 6px; margin-bottom: 6px; }
+
+/* Forms & Inputs */
+.form-group { margin-bottom: 24px; transition: all 0.3s ease; }
+.unanswered-highlight { border-left: 4px solid var(--color-warning); padding-left: 16px; border-radius: 4px; }
+label { display: block; font-weight: 500; margin-bottom: 8px; font-size: 0.95rem; }
+input[type="text"], input[type="date"], select, textarea { width: 100%; padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius); font-family: inherit; font-size: 1rem; background-color: var(--color-surface); transition: border-color 0.2s, box-shadow 0.2s; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(26, 61, 107, 0.1); }
+textarea { resize: vertical; min-height: 100px; }
+.field-missing { border-color: var(--color-danger) !important; box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.08); }
+.field-hint { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 6px; margin-bottom: 0; }
+
+.radio-group { display: flex; flex-direction: column; gap: 12px; background: var(--color-bg); padding: 16px; border-radius: var(--radius); border: 1px solid var(--color-border); }
+.radio-group.row { flex-direction: row; flex-wrap: wrap; gap: 24px; }
+.radio-label { display: flex; align-items: center; font-weight: 500; cursor: pointer; margin: 0; }
+.radio-label input { margin-right: 12px; width: 18px; height: 18px; accent-color: var(--color-primary); }
+
+/* Buttons */
+.btn-group { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+button.btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 20px; font-size: 0.95rem; font-weight: 500; font-family: inherit; border-radius: var(--radius); cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+.btn-primary { background-color: var(--color-primary); color: white; }
+.btn-primary:hover:not(:disabled) { background-color: var(--color-primary-hover); box-shadow: var(--shadow-md); }
+.btn-outline { background-color: transparent; border-color: var(--color-border); color: var(--color-text-main); }
+.btn-outline:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); background-color: var(--color-bg); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button:focus-visible, nav button:focus-visible, .drop-zone:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+/* Risk & Score Panel */
+.score-display { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--color-border); }
+.traffic-light { width: 24px; height: 24px; flex: none; border-radius: 50%; background: #ccc; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s; }
+.traffic-light.green { background: var(--color-success); box-shadow: 0 0 12px rgba(21, 128, 61, 0.4); }
+.traffic-light.yellow { background: var(--color-warning); box-shadow: 0 0 12px rgba(180, 83, 9, 0.4); }
+.traffic-light.red { background: var(--color-danger); box-shadow: 0 0 12px rgba(185, 28, 28, 0.4); }
+.score-value { font-size: 1.75rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.score-caption { font-size: 0.875rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* Decision Panel (Engine Output) */
+.kv { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; font-size: 0.875rem; border-bottom: 1px dashed var(--color-border); }
+.kv > span:first-child { color: var(--color-text-muted); flex: none; }
+.kv > span:last-child { text-align: right; font-weight: 500; overflow-wrap: anywhere; }
+.chip { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-family: var(--font-mono); font-size: 0.76rem; font-weight: 600; letter-spacing: 0.03em; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-muted); }
+.chip-permitted { background: var(--color-success-bg); color: var(--color-success); border-color: transparent; }
+.chip-review { background: var(--color-warning-bg); color: var(--color-warning); border-color: #f59e0b; }
+.chip-blocked { background: var(--color-danger-bg); color: var(--color-danger); border-color: transparent; }
+.mini-list { font-size: 0.85rem; color: var(--color-text-muted); padding-left: 18px; margin: 8px 0 16px; }
+.mini-list li { margin-bottom: 4px; }
+.panel-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); font-weight: 600; margin: 16px 0 0; }
+
+/* Drag & Drop Zone */
+.drop-zone { border: 2px dashed var(--color-border); border-radius: var(--radius); padding: 40px 20px; text-align: center; background: var(--color-bg); cursor: pointer; transition: all 0.2s; }
+.drop-zone.dragover { border-color: var(--color-primary); background: #eff6ff; }
+.drop-zone p { margin: 0; color: var(--color-text-muted); font-weight: 500; }
+
+/* Tables & Code */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.875rem; margin-bottom: 24px; background: var(--color-surface); }
+th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--color-border); vertical-align: top; overflow-wrap: anywhere; }
+th { font-weight: 600; color: var(--color-primary); background: var(--color-bg); }
+pre { font-family: var(--font-mono); font-size: 0.875rem; padding: 24px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); overflow-x: auto; white-space: pre-wrap; line-height: 1.6; margin-top: 0; }
+pre:not(.json-view) { overflow-wrap: anywhere; }
+pre.json-view { background: var(--color-code-bg); color: var(--color-code-text); border-color: var(--color-code-bg); white-space: pre; max-height: 560px; overflow: auto; font-size: 0.8rem; line-height: 1.55; padding: 20px; }
+details { margin-bottom: 16px; }
+summary { cursor: pointer; font-weight: 600; color: var(--color-primary); padding: 8px 0; }
+
+/* Badges & Alerts */
+.badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; margin-right: 8px; margin-bottom: 8px; }
+.badge-green { background: var(--color-success-bg); color: var(--color-success); }
+.badge-yellow { background: var(--color-warning-bg); color: var(--color-warning); border: 1px solid #f59e0b; }
+.badge-red { background: var(--color-danger-bg); color: var(--color-danger); }
+.badge-neutral { background: var(--color-surface); color: var(--color-text-muted); border: 1px solid var(--color-border); font-family: var(--font-mono); font-weight: 500; margin: 0; }
+
+.alert-box { padding: 16px; border-radius: var(--radius); margin-bottom: 24px; font-size: 0.9rem; border-left: 4px solid; overflow-wrap: anywhere; }
+.alert-box p:last-child { margin-bottom: 0; }
+.alert-warning { background: var(--color-warning-bg); border-color: var(--color-warning); color: #92400e; }
+.alert-danger { background: var(--color-danger-bg); border-color: var(--color-danger); color: #7f1d1d; }
+.alert-success { background: var(--color-success-bg); border-color: var(--color-success); color: #14532d; }
+.alert-info { background: #eff6ff; border-color: var(--color-primary); color: #1e3a5f; }
+
+/* Architecture View */
+.pipeline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
+.pipe-step { background: var(--color-bg); border: 1px solid var(--color-border); border-top: 3px solid var(--color-primary); border-radius: var(--radius); padding: 16px; font-size: 0.85rem; }
+.pipe-step .pipe-no { font-family: var(--font-mono); font-size: 0.72rem; color: var(--color-text-muted); letter-spacing: 0.08em; }
+.pipe-step strong { display: block; color: var(--color-primary); font-size: 0.95rem; margin: 4px 0 6px; }
+.pipe-step p { margin: 0; color: var(--color-text-muted); }
+@media (max-width: 900px) { .pipeline { grid-template-columns: 1fr; } }
+.pillar-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 8px; }
+.pillar { border: 1px solid var(--color-border); border-radius: var(--radius); padding: 20px; background: var(--color-surface); font-size: 0.9rem; }
+.pillar p { margin-bottom: 8px; color: var(--color-text-muted); }
+.pillar p:last-child { margin-bottom: 0; }
+.roadmap li { margin-bottom: 10px; }
+
+/* Footer */
+footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--color-border); font-size: 0.875rem; color: var(--color-text-muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+
+/* Utilities */
+.mt-4 { margin-top: 16px; }
+.mb-4 { margin-bottom: 16px; }
+.mb-0 { margin-bottom: 0; }
+.hidden { display: none !important; }
+.muted { color: var(--color-text-muted); }
+.small { font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>DSAR Regel-Engine</h1>
+            <div class="brand-subtitle">Powered by Universal Rules Infrastructure</div>
+            <p class="lead">Deterministische Regel-Engine für DSGVO-Betroffenenanfragen. Regeln entscheiden, Aktionen setzen durch. 100% Offline. Zero Dependencies.</p>
+            <div class="header-meta" id="header-meta"></div>
+        </header>
+
+        <nav aria-label="Hauptnavigation">
+            <button class="nav-btn active" data-target="view-workflow">1. Workflow (Hybrid)</button>
+            <button class="nav-btn" data-target="view-deadline">2. BGB-Fristenrechner</button>
+            <button class="nav-btn" data-target="view-knowledge">3. Wissensdatenbank</button>
+            <button class="nav-btn" data-target="view-cases">4. Fallbeispiele</button>
+            <button class="nav-btn" data-target="view-audit">5. Audit Trail (SHA-256)</button>
+            <button class="nav-btn" data-target="view-dev">6. Entwickler (API / MCP)</button>
+            <button class="nav-btn" data-target="view-architecture">7. Architektur</button>
+        </nav>
+
+        <main>
+            <!-- ==========================================
+                 VIEW: WORKFLOW (HYBRID)
+                 ========================================== -->
+            <section id="view-workflow" class="active">
+
+                <!-- STEP 1: SMART INGESTION -->
+                <div class="card" id="pack-card">
+                    <h3>Rule Pack</h3>
+                    <div class="form-group mb-0">
+                        <label for="pack-select">Regelwerk für diesen Vorgang</label>
+                        <select id="pack-select"></select>
+                        <p id="pack-description" class="field-hint"></p>
+                        <p class="field-hint">Alle Regelwerke laufen auf derselben, unveränderten Engine. Ein Wechsel startet einen neuen Vorgang.</p>
+                    </div>
+                </div>
+
+                <div class="card" id="step-1-ingestion">
+                    <h3>Schritt 1: Smart Ingestion (Parser)</h3>
+                    <p id="ingest-intro"></p>
+                    <label id="ingest-label" for="ingest-text"></label>
+                    <textarea id="ingest-text"></textarea>
+                    <p id="ingest-hint" class="field-hint hidden" style="color: var(--color-danger);"></p>
+                    <div class="btn-group">
+                        <button id="btn-parse" class="btn btn-primary">Text analysieren &amp; Workflow starten</button>
+                    </div>
+                </div>
+
+                <!-- STEP 2: INTERACTIVE QUESTIONNAIRE (POLICY DECISION) -->
+                <div class="card hidden" id="step-2-questionnaire">
+                    <div class="grid-3">
+                        <div>
+                            <h3>Schritt 2: Interaktive Prüfung (Policy Decision)</h3>
+                            <p>Bitte prüfen Sie die rechtlichen Voraussetzungen. <strong style="color: var(--color-warning);">Alle Fragen müssen aktiv bestätigt werden.</strong> Die Fragen stammen aus dem Rulebook; die Engine wertet Ihre Antworten deterministisch aus.</p>
+
+                            <div id="parser-reasoning" class="reasoning-box hidden mb-4"></div>
+
+                            <div class="form-group">
+                                <label id="subject-label" for="q-name"></label>
+                                <input type="text" id="q-name" autocomplete="off">
+                                <p id="subject-hint" class="field-hint"></p>
+                            </div>
+                            <div class="form-group">
+                                <label for="q-type">Anfrage-Typ</label>
+                                <select id="q-type"></select>
+                                <p class="field-hint">Ein Wechsel des Anfrage-Typs setzt alle bestätigten Antworten und alle Parser-Vorschläge zurück (Strict-Gate).</p>
+                            </div>
+
+                            <div id="dynamic-questions-container"></div>
+
+                            <div class="btn-group mt-4">
+                                <button id="btn-to-step-3" class="btn btn-primary" disabled>Weiter zu Daten &amp; Presets</button>
+                                <button id="btn-reset-workflow" class="btn btn-outline">Abbrechen</button>
+                            </div>
+                            <p id="gate-hint" class="field-hint"></p>
+                        </div>
+
+                        <div>
+                            <div style="position: sticky; top: 24px;">
+                                <h3>Live-Risiko-Bewertung</h3>
+                                <div class="score-display">
+                                    <div id="traffic-light" class="traffic-light yellow"></div>
+                                    <div>
+                                        <div class="score-caption">Compliance Score</div>
+                                        <div id="score-value" class="score-value">-.--</div>
+                                    </div>
+                                </div>
+                                <div id="pending-badge" class="badge badge-yellow mb-4">Gelb – Antwort offen (Bestätigung erforderlich)</div>
+
+                                <div class="kv"><span>Engine-Entscheidung</span><span><span id="decision-chip" class="chip chip-blocked">BLOCKED</span></span></div>
+                                <div class="kv"><span>Status</span><span><span id="status-chip" class="chip">INCOMPLETE</span></span></div>
+                                <div class="kv"><span>Geplante Aktion</span><span id="outcome-label">–</span></div>
+                                <div class="kv"><span>Rechtsgrundlage</span><span id="outcome-basis">–</span></div>
+
+                                <div class="panel-title">Begründung der Engine</div>
+                                <ul id="decision-reasons" class="mini-list"></ul>
+
+                                <div id="obligations-box" class="hidden">
+                                    <div class="panel-title">Auflagen (Obligations)</div>
+                                    <ul id="obligations-list" class="mini-list"></ul>
+                                </div>
+
+                                <div id="review-box" class="alert-box alert-warning hidden">
+                                    <strong>Manuelle Prüfung erforderlich (MANUAL_REVIEW)</strong>
+                                    <p class="mt-4">Die Aktion wird erst freigegeben, wenn eine verantwortliche Person diese Entscheidung geprüft und abgezeichnet hat.</p>
+                                    <label for="reviewer-name">Name / Kürzel der prüfenden Person</label>
+                                    <input type="text" id="reviewer-name" autocomplete="off">
+                                    <p id="reviewer-hint" class="field-hint hidden" style="color: var(--color-danger);">Bitte Namen oder Kürzel angeben.</p>
+                                    <button id="btn-review" class="btn btn-primary mt-4">Prüfung abschließen (Sign-off)</button>
+                                </div>
+                                <div id="review-done" class="alert-box alert-success hidden"></div>
+                                <div id="blocked-box" class="alert-box alert-danger hidden"></div>
+
+                                <p class="small muted">Der Score ist das Produkt der Risikofaktoren aller bestätigten Regeln (multiplikatives Modell). Unter 0.80 verlangt die Engine eine manuelle Prüfung, bei 0.00 liegt ein direkter Rechtsverstoß vor und die Aktion wird blockiert.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: ACTION INPUTS (PRESETS & DATA DROP) -->
+                <div class="card hidden" id="step-3-data">
+                    <h3>Schritt 3: Daten &amp; Presets (Eingaben für die Aktion)</h3>
+                    <div id="action-summary" class="alert-box alert-info"></div>
+
+                    <div id="preset-box" class="mb-4 hidden">
+                        <h4 id="preset-title"></h4>
+                        <p id="preset-intro"></p>
+                        <div class="form-group">
+                            <label for="preset-selector">Profil</label>
+                            <select id="preset-selector"></select>
+                        </div>
+                    </div>
+
+                    <div id="action-inputs" class="mb-4"></div>
+
+                    <div id="datadrop-section" class="mb-4">
+                        <h4>Local Data-Drop (Datenkopie Art. 15 Abs. 3)</h4>
+                        <p>Ziehen Sie einen CSV- oder JSON-Export hierher. Der lokale Parser formatiert die Daten als strukturierte Text-Tabelle. Die Datei verlässt Ihren Browser nicht.</p>
+                        <p class="field-hint mb-4">Ohne Datei wird keine Datenkopie angehängt; das Schreiben verweist dann auf eine separate Anlage, die Sie selbst beifügen müssen.</p>
+                        <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="CSV- oder JSON-Datei auswählen">
+                            <p>CSV oder JSON Datei hier ablegen oder klicken zum Auswählen</p>
+                            <input type="file" id="file-input" accept=".csv,.json" style="display: none;">
+                        </div>
+                        <div id="parsed-data-preview" class="hidden mt-4">
+                            <label for="data-attachment">Formatierte Datenkopie (Vorschau)</label>
+                            <textarea id="data-attachment" rows="6" readonly style="background: var(--color-bg); font-family: var(--font-mono); font-size: 0.85rem;"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-4">
+                        <label for="company-name">Name des Verantwortlichen (Ihr Unternehmen)</label>
+                        <input type="text" id="company-name" value="Musterunternehmen GmbH">
+                    </div>
+
+                    <div id="action-error" class="alert-box alert-danger hidden"></div>
+
+                    <div class="btn-group">
+                        <button id="btn-to-step-4" class="btn btn-primary"></button>
+                        <button id="btn-back-to-step-2" class="btn btn-outline">Zurück</button>
+                    </div>
+                </div>
+
+                <!-- STEP 4: ACTION RESULT (EXECUTION / ENFORCEMENT) -->
+                <div class="card hidden" id="step-4-generation">
+                    <h3 id="result-title"></h3>
+                    <p id="result-intro"></p>
+
+                    <div id="enforcement-record" class="alert-box alert-success"></div>
+
+                    <div class="btn-group mb-4">
+                        <button id="btn-export-txt" class="btn btn-primary"></button>
+                        <button id="btn-export-audit" class="btn btn-outline">Interne Auditerklärung (.txt)</button>
+                    </div>
+
+                    <pre id="final-letter"></pre>
+
+                    <div class="btn-group mt-4">
+                        <button id="btn-restart" class="btn btn-outline">Neuen Vorgang starten</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 VIEW: DEADLINE CALCULATOR
+                 ========================================== -->
+            <section id="view-deadline">
+                <div class="card">
+                    <h2>BGB-Fristenrechner</h2>
+                    <p>Berechnung nach § 187 Abs. 1, § 188 Abs. 2 und § 193 BGB inkl. Gaußscher Osterformel für alle 16 Bundesländer. Landesfeiertage werden erst ab dem Jahr ihrer Einführung berücksichtigt.</p>
+                    <div class="alert-box alert-warning">
+                        <strong>Orientierungswert nach BGB / VO 1182/71 (praxisüblich, aber im Detail umstritten).</strong> Ob sich die Monatsfrist des Art. 12 Abs. 3 DSGVO und ihre Verschiebung an Wochenenden und Feiertagen nach dem BGB oder nach der Fristen-Verordnung (EWG, Euratom) Nr. 1182/71 richtet, ist nicht abschließend geklärt. Planen Sie im Zweifel mit dem früheren Datum.
+                    </div>
+
+                    <div class="grid-2">
+                        <div>
+                            <div class="form-group">
+                                <label for="dl-date">Eingangsdatum der Anfrage</label>
+                                <input type="date" id="dl-date" aria-describedby="dl-hint">
+                                <p id="dl-hint" class="field-hint hidden" role="alert" style="color: var(--color-danger);">Bitte wählen Sie ein gültiges Eingangsdatum.</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="dl-state">Bundesland (Sitz des Verantwortlichen)</label>
+                                <select id="dl-state">
+                                    <option value="BW">Baden-Württemberg</option>
+                                    <option value="BY">Bayern</option>
+                                    <option value="BE">Berlin</option>
+                                    <option value="BB">Brandenburg</option>
+                                    <option value="HB">Bremen</option>
+                                    <option value="HH">Hamburg</option>
+                                    <option value="HE">Hessen</option>
+                                    <option value="MV">Mecklenburg-Vorpommern</option>
+                                    <option value="NI">Niedersachsen</option>
+                                    <option value="NW">Nordrhein-Westfalen</option>
+                                    <option value="RP">Rheinland-Pfalz</option>
+                                    <option value="SL">Saarland</option>
+                                    <option value="SN">Sachsen</option>
+                                    <option value="ST">Sachsen-Anhalt</option>
+                                    <option value="SH">Schleswig-Holstein</option>
+                                    <option value="TH">Thüringen</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label id="dl-ext-label">Fristverlängerung (Art. 12 Abs. 3 DSGVO)</label>
+                                <div class="radio-group row" role="radiogroup" aria-labelledby="dl-ext-label">
+                                    <label class="radio-label"><input type="radio" name="dl-ext" value="no" checked> Nein (1 Monat)</label>
+                                    <label class="radio-label"><input type="radio" name="dl-ext" value="yes"> Ja (+2 Monate)</label>
+                                </div>
+                            </div>
+                            <button id="btn-calc-dl" class="btn btn-primary">Frist berechnen</button>
+                        </div>
+
+                        <div id="dl-result-panel" class="hidden" style="background: var(--color-bg); padding: 24px; border-radius: var(--radius); border: 1px solid var(--color-border);">
+                            <h3>Berechnetes Fristende</h3>
+                            <div id="dl-final-date" style="font-size: 1.5rem; font-weight: 600; color: var(--color-success); margin-bottom: 8px;"></div>
+                            <p id="dl-caveat" class="small" style="color: var(--color-warning); font-weight: 600;"></p>
+                            <p id="dl-history-note" class="small muted hidden">Das Eingangsdatum liegt vor dem 25.05.2018 (Geltungsbeginn der DSGVO). Feiertagsregeln vor 2017 sind nicht historisiert.</p>
+                            <h3 style="margin-top: 24px;">Berechnungsprotokoll</h3>
+                            <ul id="dl-log" style="font-size: 0.875rem; color: var(--color-text-muted); padding-left: 20px; margin-bottom: 0;"></ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 VIEW: KNOWLEDGE BASE
+                 ========================================== -->
+            <section id="view-knowledge">
+                <div class="card">
+                    <h2>Wissensdatenbank</h2>
+                    <p>Fundierte juristische Erläuterungen zu den Kernaspekten der DSGVO-Betroffenenrechte.</p>
+                    <div id="knowledge-container"></div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 VIEW: CASES
+                 ========================================== -->
+            <section id="view-cases">
+                <div class="card">
+                    <h2>Fallbeispiel-Datenbank</h2>
+                    <p>Relevante Entscheidungen des EuGH, nationaler Gerichte und der Aufsichtsbehörden. Einträge mit dem Hinweis „Fundstelle ungeprüft“ konnten nicht gegen eine Primärquelle abgeglichen werden und sind vor einer Verwendung zu verifizieren.</p>
+                    <div class="table-wrap">
+                        <table id="cases-table">
+                            <thead>
+                                <tr>
+                                    <th>Gericht / Behörde</th>
+                                    <th>Aktenzeichen</th>
+                                    <th>Sachverhalt &amp; Leitsatz</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 VIEW: AUDIT TRAIL
+                 ========================================== -->
+            <section id="view-audit">
+                <div class="card">
+                    <h2>Execution Provenance &amp; Audit Trail</h2>
+                    <p>Jedes Ereignis der Engine (bestätigte Fakten, Policy-Entscheidungen, Reviews, ausgeführte Aktionen) wird per SHA-256 verkettet. Erkennt nachträgliche Änderungen im Workflow. Das Log dient der internen Rechenschaftspflicht (Art. 5 Abs. 2 DSGVO); eine kryptografische Garantie gegen gezielte Manipulation des lokalen Speichers (z.B. per Dev-Tools) besteht vor dem Export jedoch nicht.</p>
+
+                    <div class="alert-box alert-warning">
+                        <strong>RECHTLICHER HINWEIS ZUR AUDIT-GRENZE:</strong> Die Hash-Kette wird im Arbeitsspeicher des Browsers geführt und endet mit dem Export (.txt / .json). Sie ist nicht signiert und nicht extern verankert; wer Zugriff auf die laufende Seite hat, kann das Log samt Hashes neu berechnen. Sichern Sie den exportierten Record deshalb zeitnah in einem revisionssicheren System. Nachträgliche manuelle Änderungen am exportierten Text außerhalb dieser Anwendung liegen in der alleinigen Verantwortung und Rechenschaftspflicht (Art. 5 Abs. 2 DSGVO) des Bearbeiters.
+                    </div>
+
+                    <div class="btn-group mb-4">
+                        <button id="btn-val-chain" class="btn btn-primary">Hash-Kette validieren</button>
+                        <button id="btn-test-det" class="btn btn-outline">Determinismus-Test ausführen</button>
+                        <button id="btn-export-json" class="btn btn-outline">Record (.json) exportieren</button>
+                    </div>
+
+                    <div id="prov-status" role="status" style="padding: 16px; border-radius: var(--radius); border: 1px solid var(--color-border); margin-bottom: 24px; font-weight: 500; background: var(--color-bg); overflow-wrap: anywhere;">Status: Bereit.</div>
+
+                    <div class="table-wrap">
+                        <table id="event-log-table">
+                            <thead>
+                                <tr>
+                                    <th>Seq</th>
+                                    <th>Aktion</th>
+                                    <th>Details (Verdicts &amp; Paragraphen)</th>
+                                    <th>SHA-256 Hash (Prefix)</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 VIEW: DEVELOPER (API / MCP MOCKUP)
+                 ========================================== -->
+            <section id="view-dev">
+                <div class="card">
+                    <h2>Engine Evaluation State</h2>
+                    <p>Die Engine liefert ihre Entscheidung nicht nur als Ampel, sondern als maschinenlesbares Objekt. Dieser Zustand wird bei jeder bestätigten Antwort neu berechnet und ist die Grundlage für jede Freigabe einer Aktion. Er enthält keine Inhaltsdaten der betroffenen Person (kein Name, kein E-Mail-Text, keine Datenkopie).</p>
+                    <div class="header-meta mb-4">
+                        <span id="dev-decision-chip" class="chip chip-blocked">BLOCKED</span>
+                        <span id="dev-status-chip" class="chip">INCOMPLETE</span>
+                        <span id="dev-action-chip" class="chip">action: not authorized</span>
+                    </div>
+                    <div class="btn-group mb-4" style="margin-top: 0;">
+                        <button id="btn-dev-copy" class="btn btn-outline">JSON kopieren</button>
+                        <button id="btn-dev-export" class="btn btn-outline">Evaluation State (.json) exportieren</button>
+                    </div>
+                    <pre id="dev-state" class="json-view" tabindex="0" aria-label="Engine Evaluation State als JSON"></pre>
+                    <p class="small muted mb-0">Konsole: <code>UniversalRules.getState()</code> liefert dasselbe Objekt, <code>UniversalRules.engine.evaluate({ requestType, facts })</code> wertet beliebige Fakten gegen das geladene Rulebook aus.</p>
+                </div>
+
+                <div class="card">
+                    <h2>MCP / API Mockup</h2>
+                    <div class="alert-box alert-info">
+                        <strong>Mockup, keine Schnittstelle.</strong> Die folgenden Nachrichten werden lokal im Browser aus dem aktuellen Engine-Zustand erzeugt. Es existiert kein Server und es findet keine Netzwerkkommunikation statt. Die Struktur ist an das Model Context Protocol (JSON-RPC 2.0, <code>tools/list</code> und <code>tools/call</code>) angelehnt und zeigt, wie ein KI-Agent die Engine künftig abfragen könnte, bevor er handelt.
+                    </div>
+                    <div class="form-group">
+                        <label for="mcp-view">Simulierte Anfrage</label>
+                        <select id="mcp-view">
+                            <option value="rules_evaluate">tools/call → rules_evaluate (Entscheidung abfragen)</option>
+                            <option value="rules_authorize_action">tools/call → rules_authorize_action (Aktion freigeben lassen)</option>
+                            <option value="rules_get_rulebook">tools/call → rules_get_rulebook (Regelwerk lesen)</option>
+                            <option value="tools/list">tools/list (verfügbare Werkzeuge)</option>
+                        </select>
+                    </div>
+                    <div class="grid-2">
+                        <div>
+                            <h4>Request (Agent → Engine)</h4>
+                            <pre id="mcp-request" class="json-view" tabindex="0" aria-label="Simulierter MCP-Request"></pre>
+                        </div>
+                        <div>
+                            <h4>Response (Engine → Agent)</h4>
+                            <pre id="mcp-response" class="json-view" tabindex="0" aria-label="Simulierte MCP-Response"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Rulebook (Policy as Data)</h2>
+                    <p>Das Regelwerk ist ein reines Datenobjekt ohne ausführbaren Code. Die Engine validiert es beim Laden, friert es ein und bildet einen SHA-256-Hash darüber. Jede Entscheidung verweist auf diesen Hash.</p>
+                    <div class="table-wrap">
+                        <table id="rulebook-meta-table"><tbody></tbody></table>
+                    </div>
+                    <div class="btn-group mb-4" style="margin-top: 0;">
+                        <button id="btn-rulebook-export" class="btn btn-outline">Rulebook (.json) exportieren</button>
+                    </div>
+                    <details>
+                        <summary>Rulebook als JSON anzeigen</summary>
+                        <pre id="rulebook-json" class="json-view" tabindex="0" aria-label="Rulebook als JSON"></pre>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 VIEW: ARCHITECTURE
+                 ========================================== -->
+            <section id="view-architecture">
+                <div class="card">
+                    <h2>Vision: Universal Rules Infrastructure</h2>
+                    <p>Die DSAR Regel-Engine ist die V1 einer <strong>Universal Rules Infrastructure</strong>: einer Schicht, die Regeln strikt von ihrer Durchsetzung trennt. Regeln liegen als versionierte Daten vor, eine generische Engine wertet sie deterministisch aus, und erst ihre Entscheidung gibt eine Aktion frei. Das Prinzip ist an den Open Policy Agent (OPA) angelehnt: Die Policy-Entscheidung ist von der Stelle entkoppelt, die sie durchsetzt.</p>
+                    <p>Fachliches steckt ausschließlich in <strong>Domain Rule Packs</strong>. Die Engine selbst kennt keine DSGVO; sie kennt nur Regeln, Fakten, Risikofaktoren, Outcomes und Aktionen. Ein weiteres Rechtsgebiet ist damit ein weiteres Rulebook, kein neues Programm.</p>
+
+                    <div class="pipeline">
+                        <div class="pipe-step"><span class="pipe-no">01 · INPUT</span><strong>Bestätigte Fakten</strong><p>Parser-Vorschläge werden erst durch Klick zu Fakten (Strict-Gate).</p></div>
+                        <div class="pipe-step"><span class="pipe-no">02 · POLICY</span><strong>Rulebook</strong><p>Regeln, Abhängigkeiten, Quellen und Outcomes als Daten.</p></div>
+                        <div class="pipe-step"><span class="pipe-no">03 · DECISION</span><strong>Rules Engine</strong><p>PERMITTED, MANUAL_REVIEW oder BLOCKED. Default-Deny.</p></div>
+                        <div class="pipe-step"><span class="pipe-no">04 · ENFORCEMENT</span><strong>Action</strong><p>Das Antwortschreiben entsteht nur bei COMPLIANT oder REVIEW_COMPLETED.</p></div>
+                        <div class="pipe-step"><span class="pipe-no">05 · EVIDENCE</span><strong>Audit Trail</strong><p>Jeder Schritt in einer SHA-256-Hash-Kette.</p></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Die fünf Bausteine</h2>
+                    <div class="pillar-grid">
+                        <div class="pillar">
+                            <h4>1. Rulebook</h4>
+                            <p>Policy as Data. Jede Regel trägt ID, fachliche Frage, Risikofaktoren je Antwort, Rechtsquelle und Abhängigkeit (<code>showIf</code>). Eine Entscheidungstabelle (<code>outcomes</code>) ordnet Faktenlagen einer Aktion, Rechtsgrundlagen, Pflichtangaben und Auflagen zu.</p>
+                            <p>In dieser Datei: <code>DSARRulebook</code></p>
+                        </div>
+                        <div class="pillar">
+                            <h4>2. Rules Engine</h4>
+                            <p>Lädt und validiert das Rulebook, prüft den Zustand gegen die Regeln, berechnet den Score und fällt die Entscheidung. Ohne vollständig bestätigte Fakten lautet sie immer BLOCKED.</p>
+                            <p>In dieser Datei: <code>UniversalRulesEngine</code></p>
+                        </div>
+                        <div class="pillar">
+                            <h4>3. Provenance</h4>
+                            <p>Jede Regel verweist auf ihre Norm. Jede Entscheidung nennt die angewandten Regel-IDs, den Rulebook-Hash und einen Input-Hash. So ist nachvollziehbar, welche Regelversion auf welcher Faktenlage zu welchem Ergebnis geführt hat.</p>
+                            <p>In dieser Datei: <code>provenance</code>, <code>trace</code>, <code>inputHash</code></p>
+                        </div>
+                        <div class="pillar">
+                            <h4>4. Verification</h4>
+                            <p>SHA-256 Self-Test beim Start, Schema-Prüfung des Rulebooks beim Laden, Hash-Kette über alle Ereignisse, Determinismus-Test und ein an Faktenlage und Vorgang gebundener Review-Sign-off. Ändert sich ein Fakt, verfällt die Freigabe. Die Kette erkennt nachträgliche Änderungen, ersetzt aber keine externe Signatur.</p>
+                            <p>In dieser Datei: Tab „Audit Trail“</p>
+                        </div>
+                        <div class="pillar">
+                            <h4>5. Interface</h4>
+                            <p>Die Entscheidung liegt als maschinenlesbarer Evaluation State vor. Dieselbe Struktur kann künftig über eine API oder das Model Context Protocol an KI-Agenten ausgeliefert werden.</p>
+                            <p>In dieser Datei: Tab „Entwickler (API / MCP)“</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Einordnung gegenüber OPA</h2>
+                    <p>Die Begriffe sind bewusst gewählt. Es wird weder OPA noch Rego verwendet; übernommen ist das Trennungsprinzip.</p>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Konzept</th><th>Open Policy Agent</th><th>DSAR Regel-Engine</th></tr></thead>
+                            <tbody>
+                                <tr><td>Policy</td><td>Rego-Module</td><td><code>DSARRulebook</code> (JSON-artiges Datenobjekt)</td></tr>
+                                <tr><td>Input</td><td>JSON-Dokument der anfragenden Stelle</td><td>Aktiv bestätigte Fakten (<code>requestType</code>, <code>facts</code>)</td></tr>
+                                <tr><td>Policy Decision Point</td><td>OPA-Engine</td><td><code>UniversalRulesEngine.evaluate()</code></td></tr>
+                                <tr><td>Decision</td><td>Beliebiges JSON-Ergebnis</td><td><code>PERMITTED</code> / <code>MANUAL_REVIEW</code> / <code>BLOCKED</code> plus Status, Score, Outcome</td></tr>
+                                <tr><td>Policy Enforcement Point</td><td>Aufrufender Dienst</td><td>Dokumenten-Action: <code>authorize()</code>, dann <code>execute()</code></td></tr>
+                                <tr><td>Decision Log</td><td>Decision Logs</td><td>SHA-256 Audit Trail</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Künftige Ausbaustufen</h2>
+                    <p class="muted">Ausblick. Nichts davon ist Bestandteil dieser V1.</p>
+                    <ul class="roadmap">
+                        <li><strong>Weitere Domain Rule Packs.</strong> Die übrigen Betroffenenrechte (Art. 16, 18, 20, 21 DSGVO) und angrenzende Regelwerke. Jedes Pack ist ein eigenes, versioniertes Rulebook.</li>
+                        <li><strong>AI Agent Governance.</strong> KI-Agenten fragen die Engine über MCP ab, bevor sie ein Werkzeug aufrufen oder etwas versenden. Die Antwort (Permitted / Blocked / Manual Review) entscheidet, ob der Agent handeln darf, und wird protokolliert.</li>
+                        <li><strong>Cybersecurity Policy Engine.</strong> Zugriffs-, Konfigurations- und Freigaberegeln als Rule Packs, ausgewertet von derselben Engine und mit demselben Audit Trail.</li>
+                        <li><strong>Signierte Rulebooks.</strong> Import externer Rulebooks mit Signaturprüfung, Versionshistorie und Vier-Augen-Freigabe für Regeländerungen.</li>
+                        <li><strong>Server-Interface.</strong> Auslieferung des Evaluation State über eine echte API bzw. einen MCP-Server, ohne den Local-First-Modus aufzugeben.</li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div id="footer-version">DSAR Regel-Engine</div>
+            <div><strong>Hinweis:</strong> Workflow-Assistent, keine Rechtsberatung. 100% Local-First.</div>
+        </footer>
+    </div>
+
+    <script>
+'use strict';
+
+// ---- src/core/crypto.js ----
+/**
+ * @file SHA-256, kanonisches JSON, Self-Test
+ * Reine Funktionen ohne DOM-Zugriff. Laufen im Browser und in Node.
+ * @author benthy
+ * @license MIT
+ */
+
+function sha256Hex(inputString) {
+    const utf8 = new TextEncoder().encode(inputString);
+    const hash = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+    const k = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070, 0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+    const L = utf8.length;
+    const K = (56 - (L + 1) % 64 + 64) % 64;
+    const buffer = new Uint8Array(L + 1 + K + 8);
+    buffer.set(utf8);
+    buffer[L] = 0x80;
+    const view = new DataView(buffer.buffer);
+    view.setUint32(buffer.length - 8, Math.floor(L / 0x20000000), false);
+    view.setUint32(buffer.length - 4, (L * 8) >>> 0, false);
+    for (let i = 0; i < buffer.length; i += 64) {
+        const w = new Uint32Array(64);
+        for (let j = 0; j < 16; j++) w[j] = view.getUint32(i + j * 4, false);
+        for (let j = 16; j < 64; j++) {
+            const s0 = (w[j - 15] >>> 7 | w[j - 15] << 25) ^ (w[j - 15] >>> 18 | w[j - 15] << 14) ^ (w[j - 15] >>> 3);
+            const s1 = (w[j - 2] >>> 17 | w[j - 2] << 15) ^ (w[j - 2] >>> 19 | w[j - 2] << 13) ^ (w[j - 2] >>> 10);
+            w[j] = (w[j - 16] + s0 + w[j - 7] + s1) | 0;
+        }
+        let [a, b, c, d, e, f, g, h] = hash;
+        for (let j = 0; j < 64; j++) {
+            const S1 = (e >>> 6 | e << 26) ^ (e >>> 11 | e << 21) ^ (e >>> 25 | e << 7);
+            const ch = (e & f) ^ (~e & g);
+            const temp1 = (h + S1 + ch + k[j] + w[j]) | 0;
+            const S0 = (a >>> 2 | a << 30) ^ (a >>> 13 | a << 19) ^ (a >>> 22 | a << 10);
+            const maj = (a & b) ^ (a & c) ^ (b & c);
+            const temp2 = (S0 + maj) | 0;
+            h = g; g = f; f = e; e = (d + temp1) | 0;
+            d = c; c = b; b = a; a = (temp1 + temp2) | 0;
+        }
+        hash[0] = (hash[0] + a) | 0; hash[1] = (hash[1] + b) | 0; hash[2] = (hash[2] + c) | 0; hash[3] = (hash[3] + d) | 0;
+        hash[4] = (hash[4] + e) | 0; hash[5] = (hash[5] + f) | 0; hash[6] = (hash[6] + g) | 0; hash[7] = (hash[7] + h) | 0;
+    }
+    return hash.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+}
+
+function canonicalJson(obj) {
+    if (obj === undefined) return 'null';
+    if (obj === null || typeof obj !== 'object') return JSON.stringify(obj);
+    if (Array.isArray(obj)) return '[' + obj.map(canonicalJson).join(',') + ']';
+    const keys = Object.keys(obj).sort();
+    return '{' + keys.map(k => JSON.stringify(k) + ':' + canonicalJson(obj[k])).join(',') + '}';
+}
+
+function deepFreeze(obj) {
+    if (obj !== null && typeof obj === 'object' && !Object.isFrozen(obj)) {
+        Object.freeze(obj);
+        Object.keys(obj).forEach(k => deepFreeze(obj[k]));
+    }
+    return obj;
+}
+
+// SELF-TEST: Der SHA-256-Algorithmus ist selbst implementiert. Er wird vor dem Start
+// gegen bekannte Testvektoren (FIPS 180-4) geprüft. Schlägt der Test fehl, wäre der
+// Audit-Trail wertlos; die Anwendung startet dann nicht.
+const SHA256_TEST_VECTORS = [
+    ['', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'],
+    ['abc', 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'],
+    ['abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq', '248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1']
+];
+
+function sha256SelfTest() {
+    try {
+        return SHA256_TEST_VECTORS.every(v => sha256Hex(v[0]) === v[1]);
+    } catch (err) {
+        return false;
+    }
+}
+
+// ---- src/core/engine.js ----
+/**
+ * @file Universal Rules Engine (Policy Decision)
+ * Lädt und validiert ein Rulebook, wertet Fakten aus, entscheidet (PERMITTED / MANUAL_REVIEW / BLOCKED)
+ * und schreibt den Audit-Log. Enthält keinerlei Fachlogik.
+ * @author benthy
+ * @license MIT
+ */
+
+
+const ENGINE_VERSION = '8.1.0';
+const GENESIS_HASH = '0'.repeat(64);
+
+class UniversalRulesEngine {
+    constructor(options) {
+        const o = options || {};
+        this.name = 'UniversalRulesEngine';
+        this.version = ENGINE_VERSION;
+        this._hash = o.hash || sha256Hex;
+        this._canonical = o.canonical || canonicalJson;
+        this.onLog = typeof o.onLog === 'function' ? o.onLog : null;
+        this.eventLog = [];
+        this.chainHash = GENESIS_HASH;
+        this.reviews = {};
+        this.rulebook = null;
+        this.rulebookHash = null;
+        this._rulesById = {};
+        this.log('SYSTEM_INIT', Object.assign({ engine: this.name, version: this.version }, o.initDetails || {}));
+    }
+
+    // ---- Rulebook laden ----
+    static validateRulebook(rb) {
+        const errors = [];
+        const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+        if (!isObj(rb)) return ['Rulebook ist kein Objekt.'];
+        const md = isObj(rb.metadata) ? rb.metadata : {};
+        if (!md.id || !md.version) errors.push('metadata.id und metadata.version sind erforderlich.');
+        const policy = isObj(md.decisionPolicy) ? md.decisionPolicy : null;
+        if (!policy || typeof policy.blockAtOrBelow !== 'number' || typeof policy.reviewBelow !== 'number') errors.push('metadata.decisionPolicy ist unvollständig.');
+        const thresholds = md.scoring && md.scoring.thresholds;
+        if (!thresholds || typeof thresholds.green !== 'number' || typeof thresholds.yellow !== 'number') errors.push('metadata.scoring.thresholds ist unvollständig.');
+        const actions = Array.isArray(md.actions) ? md.actions : [];
+        const actionIds = actions.map(a => a && a.id);
+        actions.forEach(a => { if (!a || !a.id || !Array.isArray(a.requiresStatus)) errors.push('metadata.actions: id und requiresStatus sind erforderlich.'); });
+        const types = Array.isArray(rb.requestTypes) ? rb.requestTypes.map(t => t && t.id) : [];
+        if (!types.length) errors.push('requestTypes fehlen.');
+
+        const ruleIds = {};
+        const factsByScope = {};
+        const rules = Array.isArray(rb.rules) ? rb.rules : [];
+        if (!rules.length) errors.push('rules fehlen.');
+        rules.forEach((r, i) => {
+            const ref = r && r.id ? r.id : 'rules[' + i + ']';
+            if (!isObj(r) || !r.id) { errors.push(ref + ': id fehlt.'); return; }
+            if (ruleIds[r.id]) errors.push(ref + ': ID ist nicht eindeutig.');
+            ruleIds[r.id] = true;
+            if (types.indexOf(r.scope) === -1) errors.push(ref + ': unbekannter scope "' + r.scope + '".');
+            if (!r.fact) errors.push(ref + ': fact fehlt.');
+            if (!r.question) errors.push(ref + ': question fehlt.');
+            if (!Array.isArray(r.answers) || r.answers.length < 2) {
+                errors.push(ref + ': answers benötigt mindestens zwei Werte.');
+            } else {
+                r.answers.forEach(a => {
+                    const f = isObj(r.risk) ? r.risk[a] : undefined;
+                    if (typeof f !== 'number' || f < 0 || f > 1) errors.push(ref + ': risk["' + a + '"] muss eine Zahl zwischen 0 und 1 sein.');
+                });
+            }
+            if (!isObj(r.provenance) || !r.provenance.source) errors.push(ref + ': provenance.source fehlt.');
+            const known = factsByScope[r.scope] || (factsByScope[r.scope] = {});
+            if (r.showIf) {
+                const dep = known[r.showIf.fact];
+                if (!dep) errors.push(ref + ': showIf verweist auf einen unbekannten oder später definierten Fakt.');
+                else if (dep.indexOf(r.showIf.equals) === -1) errors.push(ref + ': showIf.equals ist keine gültige Antwort der Bezugsregel.');
+            }
+            if (known[r.fact]) errors.push(ref + ': fact "' + r.fact + '" ist im scope doppelt vergeben.');
+            known[r.fact] = Array.isArray(r.answers) ? r.answers : [];
+        });
+
+        const outcomeIds = {};
+        const outcomes = Array.isArray(rb.outcomes) ? rb.outcomes : [];
+        if (!outcomes.length) errors.push('outcomes fehlen.');
+        const checkWhen = (ref, scope, when) => {
+            if (!isObj(when)) { errors.push(ref + ': when muss ein Objekt sein.'); return; }
+            Object.keys(when).forEach(f => {
+                const answers = (factsByScope[scope] || {})[f];
+                if (!answers) errors.push(ref + ': when verweist auf unbekannten Fakt "' + f + '".');
+                else if (answers.indexOf(when[f]) === -1) errors.push(ref + ': when["' + f + '"] ist keine gültige Antwort.');
+            });
+        };
+        outcomes.forEach((o, i) => {
+            const ref = o && o.id ? o.id : 'outcomes[' + i + ']';
+            if (!isObj(o) || !o.id) { errors.push(ref + ': id fehlt.'); return; }
+            if (outcomeIds[o.id]) errors.push(ref + ': ID ist nicht eindeutig.');
+            outcomeIds[o.id] = true;
+            if (types.indexOf(o.scope) === -1) errors.push(ref + ': unbekannter scope.');
+            checkWhen(ref, o.scope, o.when);
+            if (o.effect === 'ALLOW') {
+                if (actionIds.indexOf(o.action) === -1) errors.push(ref + ': unbekannte action.');
+                if (!o.template) errors.push(ref + ': template fehlt.');
+            } else if (o.effect === 'DENY') {
+                if (!o.blockReason) errors.push(ref + ': blockReason fehlt.');
+            } else {
+                errors.push(ref + ': effect muss ALLOW oder DENY sein.');
+            }
+            if (!Array.isArray(o.legalBasis) || !o.legalBasis.length) errors.push(ref + ': legalBasis fehlt.');
+            ['conditionalBasis', 'requiredInputs', 'obligations'].forEach(key => {
+                (Array.isArray(o[key]) ? o[key] : []).forEach(entry => { if (entry && entry.when) checkWhen(ref + '.' + key, o.scope, entry.when); });
+            });
+        });
+        return errors;
+    }
+
+    load(rulebook) {
+        const errors = UniversalRulesEngine.validateRulebook(rulebook);
+        if (errors.length) throw new Error('Ungültiges Rulebook: ' + errors.join(' '));
+        this.rulebook = deepFreeze(rulebook);
+        this.rulebookHash = this._hash(this._canonical(rulebook));
+        this._rulesById = {};
+        rulebook.rules.forEach(r => { this._rulesById[r.id] = r; });
+        this.reviews = {};
+        this.log('RULEBOOK_LOADED', {
+            id: rulebook.metadata.id,
+            version: rulebook.metadata.version,
+            rules: rulebook.rules.length,
+            outcomes: rulebook.outcomes.length,
+            rulebookHash: this.rulebookHash
+        });
+        return this;
+    }
+
+    getRequestTypes() { return this.rulebook.requestTypes.slice(); }
+    getRule(id) { return this._rulesById[id] || null; }
+    rulesFor(scope) { return this.rulebook.rules.filter(r => r.scope === scope); }
+
+    static matches(when, facts) {
+        return Object.keys(when || {}).every(k => facts[k] === when[k]);
+    }
+
+    _resolveOutcome(scope, facts) {
+        const hit = this.rulebook.outcomes.find(o => o.scope === scope && UniversalRulesEngine.matches(o.when, facts));
+        if (!hit) return null;
+        const pick = list => (Array.isArray(list) ? list : []).filter(e => !e.when || UniversalRulesEngine.matches(e.when, facts));
+        return {
+            id: hit.id,
+            effect: hit.effect,
+            label: hit.label || hit.id,
+            verdict: hit.verdict || null,
+            action: hit.action || null,
+            template: hit.template || null,
+            requiresReview: hit.requiresReview === true,
+            reviewReason: hit.reviewReason || null,
+            blockReason: hit.blockReason || null,
+            acceptsAttachment: hit.acceptsAttachment === true,
+            legalBasis: hit.legalBasis.concat(pick(hit.conditionalBasis).map(e => e.basis)),
+            requiredInputs: pick(hit.requiredInputs).map(e => ({ field: e.field, label: e.label })),
+            obligations: pick(hit.obligations).map(e => ({ id: e.id, text: e.text }))
+        };
+    }
+
+    // ---- Zustand gegen die Regeln prüfen (rein, ohne Seiteneffekte) ----
+    evaluate(input) {
+        if (!this.rulebook) throw new Error('Kein Rulebook geladen.');
+        const inp = input || {};
+        const requestType = inp.requestType;
+        const facts = inp.facts || {};
+        const caseId = inp.caseId || null;
+        const md = this.rulebook.metadata;
+        const rules = this.rulesFor(requestType);
+
+        const effective = {};
+        const trace = [];
+        const pending = [];
+        const skipped = [];
+        let product = 1;
+
+        rules.forEach(r => {
+            // Eine Regel ist nur aktiv, wenn ihre Bezugsregel selbst aktiv UND passend bestätigt ist.
+            const active = !r.showIf || effective[r.showIf.fact] === r.showIf.equals;
+            if (!active) { skipped.push(r.id); return; }
+            const answer = facts[r.fact];
+            if (answer === undefined || r.answers.indexOf(answer) === -1) {
+                pending.push(r.id);
+                trace.push({ ruleId: r.id, fact: r.fact, state: 'PENDING' });
+                return;
+            }
+            effective[r.fact] = answer;
+            const factor = r.risk[answer];
+            product *= factor;
+            trace.push({ ruleId: r.id, fact: r.fact, state: 'ANSWERED', answer: answer, factor: factor, source: r.provenance.source });
+        });
+
+        const ignoredFacts = Object.keys(facts).filter(f => !(f in effective)).sort();
+        const complete = rules.length > 0 && pending.length === 0;
+        const score = complete ? Math.round(product * 10000) / 10000 : null;
+        const inputHash = this._hash(this._canonical({
+            rulebook: this.rulebookHash, caseId: caseId, requestType: requestType || null, facts: effective
+        }));
+
+        let decision = md.decisionPolicy.defaultDecision;
+        let status = 'INCOMPLETE';
+        let riskLevel = 'PENDING';
+        let outcome = null;
+        const reasons = [];
+
+        if (!rules.length) {
+            reasons.push({ code: 'UNKNOWN_REQUEST_TYPE', message: 'Für diesen Anfrage-Typ enthält das Rulebook keine Regeln.' });
+        } else if (!complete) {
+            reasons.push({ code: 'FACTS_PENDING', message: pending.length + ' aktive Regel(n) ohne bestätigte Antwort. Default-Deny.' });
+        } else {
+            const t = md.scoring.thresholds;
+            riskLevel = score >= t.green ? 'GREEN' : (score >= t.yellow ? 'YELLOW' : 'RED');
+            outcome = this._resolveOutcome(requestType, effective);
+            if (!outcome) {
+                decision = 'BLOCKED'; status = 'NON_COMPLIANT';
+                reasons.push({ code: 'NO_OUTCOME', message: 'Das Rulebook definiert für diese Faktenlage kein Outcome.' });
+            } else if (outcome.effect === 'DENY' || score <= md.decisionPolicy.blockAtOrBelow) {
+                decision = 'BLOCKED'; status = 'NON_COMPLIANT';
+                reasons.push({ code: 'POLICY_DENY', message: outcome.blockReason || 'Der Score liegt an oder unter der Block-Schwelle.' });
+            } else if (score < md.decisionPolicy.reviewBelow || outcome.requiresReview) {
+                decision = 'MANUAL_REVIEW';
+                if (score < md.decisionPolicy.reviewBelow) {
+                    reasons.push({ code: 'SCORE_BELOW_REVIEW_THRESHOLD', message: 'Score ' + score.toFixed(2) + ' liegt unter der Review-Schwelle ' + md.decisionPolicy.reviewBelow.toFixed(2) + '.' });
+                }
+                if (outcome.requiresReview) {
+                    reasons.push({ code: 'OUTCOME_REQUIRES_REVIEW', message: outcome.reviewReason || 'Das Outcome verlangt eine manuelle Prüfung.' });
+                }
+                status = this.reviews[inputHash] ? 'REVIEW_COMPLETED' : 'REVIEW_REQUIRED';
+            } else {
+                decision = 'PERMITTED'; status = 'COMPLIANT';
+                reasons.push({ code: 'POLICY_ALLOW', message: 'Alle aktiven Regeln sind bestätigt; Score ' + score.toFixed(2) + ' erreicht die Schwelle.' });
+            }
+        }
+
+        const review = this.reviews[inputHash] || null;
+        return {
+            schema: 'uri.evaluation/v1',
+            engine: { name: this.name, version: this.version },
+            rulebook: { id: md.id, version: md.version, hash: this.rulebookHash },
+            input: { caseId: caseId, requestType: requestType || null, facts: effective },
+            inputHash: inputHash,
+            complete: complete,
+            decision: decision,
+            status: status,
+            score: score,
+            riskLevel: riskLevel,
+            reasons: reasons,
+            outcome: outcome,
+            review: {
+                required: decision === 'MANUAL_REVIEW',
+                completed: decision === 'MANUAL_REVIEW' && !!review,
+                reviewer: decision === 'MANUAL_REVIEW' && review ? review.reviewer : null
+            },
+            pending: pending,
+            skipped: skipped,
+            ignoredFacts: ignoredFacts,
+            trace: trace
+        };
+    }
+
+    // ---- Freigabe einer Aktion (rein, ohne Seiteneffekte) ----
+    authorize(actionId, evaluation, payload) {
+        const deny = (code, message, extra) => Object.assign({ authorized: false, action: actionId, code: code, message: message }, extra || {});
+        const def = this.rulebook.metadata.actions.find(a => a.id === actionId);
+        if (!def) return deny('UNKNOWN_ACTION', 'Die Aktion ist im Rulebook nicht definiert.');
+        if (!evaluation || def.requiresStatus.indexOf(evaluation.status) === -1) {
+            return deny('STATUS_NOT_SUFFICIENT', 'Status ' + (evaluation ? evaluation.status : 'UNKNOWN') + ' genügt nicht. Erforderlich: ' + def.requiresStatus.join(' oder ') + '.');
+        }
+        if (!evaluation.outcome || evaluation.outcome.action !== actionId) {
+            return deny('ACTION_NOT_IN_OUTCOME', 'Das Outcome sieht diese Aktion nicht vor.');
+        }
+        const data = payload || {};
+        const missing = evaluation.outcome.requiredInputs.filter(req => String(data[req.field] == null ? '' : data[req.field]).trim() === '');
+        if (missing.length) {
+            return deny('REQUIRED_INPUT_MISSING', 'Pflichtangaben fehlen: ' + missing.map(m => m.label).join('; ') + '.', { missingInputs: missing.map(m => m.field) });
+        }
+        return { authorized: true, action: actionId, code: 'AUTHORIZED', message: 'Aktion freigegeben (Status ' + evaluation.status + ').', status: evaluation.status, inputHash: evaluation.inputHash };
+    }
+
+    // ---- Manuelle Prüfung abzeichnen (an Vorgang + Faktenlage gebunden) ----
+    recordReview(input, reviewer) {
+        const ev = this.evaluate(input);
+        const name = String(reviewer || '').trim();
+        if (!name) return { ok: false, code: 'REVIEWER_MISSING' };
+        if (!ev.complete || ev.decision !== 'MANUAL_REVIEW') return { ok: false, code: 'NO_REVIEW_REQUIRED' };
+        if (this.reviews[ev.inputHash]) return { ok: true, code: 'ALREADY_REVIEWED' };
+        this.reviews[ev.inputHash] = { reviewer: name };
+        this.log('MANUAL_REVIEW_COMPLETED', {
+            caseId: ev.input.caseId, reviewer: name, inputHash: ev.inputHash,
+            outcome: ev.outcome.id, verdict: ev.outcome.verdict, score: ev.score,
+            reasons: ev.reasons.map(r => r.code)
+        });
+        return { ok: true, code: 'REVIEW_RECORDED' };
+    }
+
+    // ---- Audit-Log (SHA-256 Hash-Kette) ----
+    static eventPayload(e) {
+        return { seq: e.seq, action: e.action, details: e.details, prevHash: e.prevHash, engine: e.engine };
+    }
+
+    log(action, details) {
+        const seq = this.eventLog.length;
+        const prevHash = seq === 0 ? GENESIS_HASH : this.eventLog[seq - 1].hash;
+        const eventObj = { seq: seq, action: action, details: details, prevHash: prevHash, engine: this.version };
+        const hash = this._hash(this._canonical(eventObj));
+        this.eventLog.push(Object.assign({}, eventObj, { hash: hash }));
+        this.chainHash = hash;
+        if (this.onLog) this.onLog(this.eventLog[seq]);
+        return hash;
+    }
+
+    verifyChain() {
+        for (let i = 0; i < this.eventLog.length; i++) {
+            const e = this.eventLog[i];
+            const expected = this._hash(this._canonical(UniversalRulesEngine.eventPayload(e)));
+            const prevOk = i === 0 ? e.prevHash === GENESIS_HASH : e.prevHash === this.eventLog[i - 1].hash;
+            if (e.hash !== expected || !prevOk) return { valid: false, brokenAt: i };
+        }
+        return { valid: true, brokenAt: null };
+    }
+}
+
+// ---- src/rulepacks/dsar-gdpr-de.js ----
+/**
+ * @file Domain Rule Pack: DSGVO-Betroffenenanfragen (Art. 15, 17, 12 Abs. 3)
+ * Reines Datenobjekt. Kein ausführbarer Code, keine Funktionen.
+ * - rules:    Frage, Risikofaktoren je Antwort, Rechtsquelle, Abhängigkeit (showIf)
+ * - outcomes: Entscheidungstabelle je Anfrage-Typ; der erste passende Eintrag gilt
+ * @author benthy
+ * @license MIT
+ */
+
+const DSARRulebook = {
+    metadata: {
+        schema: 'uri.rulebook/v1',
+        id: 'dsar-gdpr-de',
+        name: 'DSGVO-Betroffenenanfragen (DSAR)',
+        version: '1.1.0',
+        domain: 'Datenschutz / Betroffenenrechte',
+        jurisdiction: 'EU (Verordnung (EU) 2016/679)',
+        language: 'de',
+        description: 'Betroffenenanfragen: Auskunft (Art. 15), Löschung (Art. 17) und Fristverlängerung (Art. 12 Abs. 3 DSGVO).',
+        answerLabels: { yes: 'Ja', no: 'Nein' },
+        scoring: {
+            model: 'multiplicative',
+            description: 'Score = Produkt der Risikofaktoren aller aktiven, bestätigten Regeln.',
+            thresholds: { green: 0.8, yellow: 0.5 }
+        },
+        decisionPolicy: {
+            defaultDecision: 'BLOCKED',
+            blockAtOrBelow: 0,
+            reviewBelow: 0.8
+        },
+        actions: [
+            {
+                id: 'generate_response_letter',
+                label: 'Antwortschreiben generieren',
+                requiresStatus: ['COMPLIANT', 'REVIEW_COMPLETED'],
+                // Hinweise und sichtbare Vorbelegungen für die Eingabefelder der Aktion
+                inputs: {
+                    recipients: { hint: 'Empfänger nach Möglichkeit konkret benennen (EuGH C-154/21); Kategorien nur, wenn eine Identifizierung nicht möglich ist.' },
+                    origin: { defaultValue: 'Die Daten wurden direkt bei der betroffenen Person erhoben.' },
+                    automated: { defaultValue: 'Eine automatisierte Entscheidungsfindung einschließlich Profiling gemäß Art. 22 DSGVO findet nicht statt.' },
+                    safeguards: {
+                        hint: 'Sie haben eine Drittlandübermittlung bestätigt. Die betroffene Person ist über die geeigneten Garantien zu unterrichten (Art. 15 Abs. 2 DSGVO). Dieses Feld wird bewusst nicht vorbelegt.',
+                        placeholder: 'z.B. Empfängerland, Standardvertragsklauseln der EU-Kommission (Art. 46 Abs. 2 lit. c DSGVO) oder Angemessenheitsbeschluss (Art. 45 DSGVO)'
+                    }
+                }
+            }
+        ]
+    },
+
+    requestTypes: [
+        { id: 'art15', label: 'Art. 15 DSGVO (Auskunft)' },
+        { id: 'art17', label: 'Art. 17 DSGVO (Löschung)' },
+        { id: 'art12_3', label: 'Art. 12 Abs. 3 DSGVO (Fristverlängerung)' }
+    ],
+
+    rules: [
+        // ---------- Art. 15 DSGVO: Auskunft ----------
+        {
+            id: 'DSAR-A15-01', scope: 'art15', fact: 'id_doubt',
+            question: 'Bestehen begründete Zweifel an der Identität?',
+            answers: ['yes', 'no'], risk: { yes: 0.2, no: 1.0 },
+            provenance: {
+                source: 'Art. 12 Abs. 6 DSGVO',
+                quote: 'begründete Zweifel an der Identität der natürlichen Person',
+                note: 'Identitätsprüfung ohne Zweifel ist unzulässig. Ausweiskopie nur als Ultima Ratio. Bei "Ja" ruht der Prozess, weitere Fragen werden übersprungen.'
+            }
+        },
+        {
+            id: 'DSAR-A15-02', scope: 'art15', fact: 'excessive',
+            question: 'Ist der Antrag offenkundig exzessiv?',
+            answers: ['yes', 'no'], risk: { yes: 0.3, no: 1.0 },
+            showIf: { fact: 'id_doubt', equals: 'no' },
+            provenance: {
+                source: 'Art. 12 Abs. 5 DSGVO',
+                quote: 'offenkundig unbegründeten oder […] exzessiven Anträgen',
+                note: 'Ablehnung wegen Exzessivität hat hohe Hürden. Die Beweislast liegt beim Verantwortlichen.'
+            }
+        },
+        {
+            id: 'DSAR-A15-03', scope: 'art15', fact: 'data_processed',
+            question: 'Werden personenbezogene Daten verarbeitet?',
+            answers: ['yes', 'no'], risk: { yes: 1.0, no: 1.0 },
+            showIf: { fact: 'excessive', equals: 'no' },
+            provenance: {
+                source: 'Art. 15 Abs. 1 DSGVO',
+                quote: 'eine Bestätigung darüber zu verlangen, ob sie betreffende personenbezogene Daten verarbeitet werden',
+                note: 'Bestimmt, ob eine Negativauskunft oder Vollauskunft erteilt wird. Beide Wege sind compliance-konform (Faktor 1.0).'
+            }
+        },
+        {
+            id: 'DSAR-A15-04', scope: 'art15', fact: 'large_amount',
+            question: 'Sehr große Datenmenge (Präzisierung nötig)?',
+            answers: ['yes', 'no'], risk: { yes: 0.7, no: 1.0 },
+            showIf: { fact: 'data_processed', equals: 'yes' },
+            provenance: {
+                source: 'ErwGr. 63 S. 7 DSGVO',
+                quote: 'eine große Menge von Informationen über die betroffene Person',
+                note: 'Der Betroffene kann zur Eingrenzung des Suchraums aufgefordert werden.'
+            }
+        },
+        {
+            id: 'DSAR-A15-05', scope: 'art15', fact: 'third_party',
+            question: 'Sind Rechte Dritter betroffen (z.B. in E-Mails)?',
+            answers: ['yes', 'no'], risk: { yes: 0.6, no: 1.0 },
+            showIf: { fact: 'data_processed', equals: 'yes' },
+            provenance: {
+                source: 'Art. 15 Abs. 4 DSGVO',
+                quote: 'darf die Rechte und Freiheiten anderer Personen nicht beeinträchtigen',
+                note: 'Erfordert Schwärzungen in der Datenkopie, keine Totalverweigerung.'
+            }
+        },
+        {
+            id: 'DSAR-A15-06', scope: 'art15', fact: 'third_country',
+            question: 'Findet eine Drittlandübermittlung statt?',
+            answers: ['yes', 'no'], risk: { yes: 0.8, no: 1.0 },
+            showIf: { fact: 'data_processed', equals: 'yes' },
+            provenance: {
+                source: 'Art. 15 Abs. 2 i.V.m. Art. 46 DSGVO',
+                quote: 'über die geeigneten Garantien gemäß Artikel 46 […] unterrichtet zu werden',
+                note: 'Geeignete Garantien (z.B. Standardvertragsklauseln) müssen in der Auskunft genannt werden.'
+            }
+        },
+        {
+            id: 'DSAR-A15-07', scope: 'art15', fact: 'electronic_format',
+            question: 'Wurde der Antrag elektronisch gestellt?',
+            answers: ['yes', 'no'], risk: { yes: 1.0, no: 1.0 },
+            showIf: { fact: 'data_processed', equals: 'yes' },
+            provenance: {
+                source: 'Art. 15 Abs. 3 S. 3 DSGVO',
+                quote: 'in einem gängigen elektronischen Format zur Verfügung zu stellen',
+                note: 'Die Datenkopie muss in einem gängigen elektronischen Format bereitgestellt werden.'
+            }
+        },
+
+        // ---------- Art. 17 DSGVO: Löschung ----------
+        {
+            id: 'DSAR-A17-01', scope: 'art17', fact: 'id_doubt',
+            question: 'Bestehen begründete Zweifel an der Identität?',
+            answers: ['yes', 'no'], risk: { yes: 0.2, no: 1.0 },
+            provenance: {
+                source: 'Art. 12 Abs. 6 DSGVO',
+                quote: 'begründete Zweifel an der Identität der natürlichen Person',
+                note: 'Die Löschung ruht bis zur Klärung der Identität. Bei "Ja" werden weitere Fragen übersprungen.'
+            }
+        },
+        {
+            id: 'DSAR-A17-02', scope: 'art17', fact: 'erasure_reason',
+            question: 'Liegt ein gesetzlicher Löschgrund vor (z.B. Zweckentfall)?',
+            answers: ['yes', 'no'], risk: { yes: 0.9, no: 1.0 },
+            showIf: { fact: 'id_doubt', equals: 'no' },
+            provenance: {
+                source: 'Art. 17 Abs. 1 DSGVO',
+                quote: 'unverzüglich gelöscht werden',
+                note: 'Grundvoraussetzung für die Löschung.'
+            }
+        },
+        {
+            id: 'DSAR-A17-03', scope: 'art17', fact: 'erasure_exception',
+            question: 'Greift eine Ausnahme (z.B. gesetzliche Aufbewahrungspflicht)?',
+            answers: ['yes', 'no'], risk: { yes: 0.4, no: 1.0 },
+            showIf: { fact: 'erasure_reason', equals: 'yes' },
+            provenance: {
+                source: 'Art. 17 Abs. 3 DSGVO',
+                quote: 'zur Erfüllung einer rechtlichen Verpflichtung',
+                note: 'Daten werden nicht gelöscht, sondern gesperrt (Art. 18 DSGVO).'
+            }
+        },
+        {
+            id: 'DSAR-A17-04', scope: 'art17', fact: 'public_data',
+            question: 'Wurden die Daten öffentlich gemacht?',
+            answers: ['yes', 'no'], risk: { yes: 0.6, no: 1.0 },
+            showIf: { fact: 'erasure_exception', equals: 'no' },
+            provenance: {
+                source: 'Art. 17 Abs. 2 DSGVO',
+                quote: 'Hat der Verantwortliche die personenbezogenen Daten öffentlich gemacht',
+                note: 'Der Verantwortliche muss andere Stellen über das Löschbegehren informieren.'
+            }
+        },
+        {
+            id: 'DSAR-A17-05', scope: 'art17', fact: 'recipients',
+            question: 'Wurden die Daten an Empfänger übermittelt?',
+            answers: ['yes', 'no'], risk: { yes: 0.8, no: 1.0 },
+            showIf: { fact: 'erasure_exception', equals: 'no' },
+            provenance: {
+                source: 'Art. 19 DSGVO',
+                quote: 'es sei denn, dies erweist sich als unmöglich',
+                note: 'Empfänger müssen über die Löschung informiert werden.'
+            }
+        },
+
+        // ---------- Art. 12 Abs. 3 DSGVO: Fristverlängerung ----------
+        {
+            id: 'DSAR-A12-01', scope: 'art12_3', fact: 'complex_request',
+            question: 'Ist die Anfrage besonders komplex oder liegt eine Vielzahl von Anträgen vor?',
+            answers: ['yes', 'no'], risk: { yes: 1.0, no: 0.0 },
+            provenance: {
+                source: 'Art. 12 Abs. 3 S. 2 DSGVO',
+                quote: 'Diese Frist kann um weitere zwei Monate verlängert werden',
+                note: 'Die Fristverlängerung ist nur bei komplexen oder zahlreichen Anträgen zulässig. Komplexität an sich ist kein Compliance-Verstoß (Faktor 1.0). Ohne diesen Grund ist die Verlängerung unzulässig (Faktor 0.0).'
+            }
+        },
+        {
+            id: 'DSAR-A12-02', scope: 'art12_3', fact: 'within_first_month',
+            question: 'Befinden wir uns noch im ersten Monat nach Eingang?',
+            answers: ['yes', 'no'], risk: { yes: 1.0, no: 0.0 },
+            provenance: {
+                source: 'Art. 12 Abs. 3 S. 3 DSGVO',
+                quote: 'innerhalb eines Monats nach Eingang des Antrags über eine Fristverlängerung',
+                note: 'Die Mitteilung über die Verlängerung muss zwingend innerhalb des ersten Monats erfolgen. Bei "Nein" ist die Verlängerung rechtswidrig (Faktor 0.0).'
+            }
+        }
+    ],
+
+    outcomes: [
+        // ---------- Art. 15 ----------
+        {
+            id: 'A15-IDENTITY', scope: 'art15', when: { id_doubt: 'yes' },
+            effect: 'ALLOW', action: 'generate_response_letter', template: 'identity_check',
+            label: 'Identitätsnachweis anfordern', verdict: 'Nachforderung',
+            legalBasis: ['Art. 12 Abs. 6 DSGVO'],
+            obligations: [
+                { id: 'OBL-ID-1', text: 'Nur den mildesten geeigneten Nachweis anfordern; keine pauschale Ausweiskopie.' },
+                { id: 'OBL-ID-2', text: 'Vorgang nach Eingang des Nachweises erneut prüfen.' }
+            ]
+        },
+        {
+            id: 'A15-REFUSAL', scope: 'art15', when: { excessive: 'yes' },
+            effect: 'ALLOW', action: 'generate_response_letter', template: 'refusal_excessive',
+            label: 'Ablehnung wegen Exzessivität', verdict: 'Ablehnung',
+            requiresReview: true,
+            reviewReason: 'Das Outcome verweigert ein Betroffenenrecht.',
+            legalBasis: ['Art. 12 Abs. 5 S. 2 DSGVO', 'Art. 12 Abs. 4 DSGVO'],
+            obligations: [
+                { id: 'OBL-EXC-1', text: 'Nachweis des exzessiven Charakters intern dokumentieren (Beweislast beim Verantwortlichen).' }
+            ]
+        },
+        {
+            id: 'A15-NEGATIVE', scope: 'art15', when: { data_processed: 'no' },
+            effect: 'ALLOW', action: 'generate_response_letter', template: 'negative_disclosure',
+            label: 'Negativauskunft erteilen', verdict: 'Negativauskunft',
+            legalBasis: ['Art. 15 Abs. 1 DSGVO'],
+            obligations: [
+                { id: 'OBL-NEG-1', text: 'Suche in allen relevanten Systemen dokumentieren.' }
+            ]
+        },
+        {
+            id: 'A15-CLARIFY', scope: 'art15', when: { large_amount: 'yes' },
+            effect: 'ALLOW', action: 'generate_response_letter', template: 'clarification_request',
+            label: 'Präzisierung anfordern', verdict: 'Präzisierung',
+            legalBasis: ['ErwGr. 63 S. 7 DSGVO']
+        },
+        {
+            id: 'A15-FULL', scope: 'art15', when: { data_processed: 'yes' },
+            effect: 'ALLOW', action: 'generate_response_letter', template: 'full_disclosure',
+            label: 'Vollauskunft erteilen', verdict: 'Vollauskunft erteilt',
+            acceptsAttachment: true,
+            legalBasis: ['Art. 15 Abs. 1 lit. a-h DSGVO', 'Art. 15 Abs. 3 DSGVO'],
+            conditionalBasis: [
+                { when: { third_country: 'yes' }, basis: 'Art. 15 Abs. 2 DSGVO' },
+                { when: { third_party: 'yes' }, basis: 'Art. 15 Abs. 4 DSGVO' }
+            ],
+            requiredInputs: [
+                { field: 'purposes', label: 'Zwecke & Rechtsgrundlagen (lit. a)' },
+                { field: 'categories', label: 'Kategorien personenbezogener Daten (lit. b)' },
+                { field: 'recipients', label: 'Empfänger / Kategorien (lit. c)' },
+                { field: 'retention', label: 'Speicherdauer (lit. d)' },
+                { field: 'origin', label: 'Herkunft der Daten (lit. f)' },
+                { field: 'automated', label: 'Automatisierte Entscheidungsfindung (lit. g)' },
+                { field: 'safeguards', label: 'Geeignete Garantien nach Art. 46 DSGVO', when: { third_country: 'yes' } }
+            ],
+            obligations: [
+                { id: 'OBL-FULL-1', text: 'Datenkopie vor dem Versand auf Vollständigkeit prüfen.' },
+                { id: 'OBL-FULL-2', text: 'Datenkopie auf Rechte Dritter prüfen und betroffene Passagen schwärzen.', when: { third_party: 'yes' } },
+                { id: 'OBL-FULL-3', text: 'Kopie in einem gängigen elektronischen Format bereitstellen.', when: { electronic_format: 'yes' } }
+            ]
+        },
+
+        // ---------- Art. 17 ----------
+        {
+            id: 'A17-IDENTITY', scope: 'art17', when: { id_doubt: 'yes' },
+            effect: 'ALLOW', action: 'generate_response_letter', template: 'identity_check',
+            label: 'Identitätsnachweis anfordern', verdict: 'Nachforderung',
+            legalBasis: ['Art. 12 Abs. 6 DSGVO'],
+            obligations: [
+                { id: 'OBL-ID-1', text: 'Nur den mildesten geeigneten Nachweis anfordern; keine pauschale Ausweiskopie.' },
+                { id: 'OBL-ID-2', text: 'Vorgang nach Eingang des Nachweises erneut prüfen.' }
+            ]
+        },
+        {
+            id: 'A17-REJECTED', scope: 'art17', when: { erasure_reason: 'no' },
+            effect: 'ALLOW', action: 'generate_response_letter', template: 'erasure_rejected',
+            label: 'Löschung ablehnen (kein Löschgrund)', verdict: 'Abgelehnt (Kein Grund)',
+            requiresReview: true,
+            reviewReason: 'Das Outcome verweigert ein Betroffenenrecht.',
+            legalBasis: ['Art. 17 Abs. 1 DSGVO', 'Art. 12 Abs. 4 DSGVO']
+        },
+        {
+            id: 'A17-RESTRICTED', scope: 'art17', when: { erasure_exception: 'yes' },
+            effect: 'ALLOW', action: 'generate_response_letter', template: 'erasure_restricted',
+            label: 'Verarbeitung einschränken statt löschen', verdict: 'Teilweise (Sperrung)',
+            legalBasis: ['Art. 17 Abs. 3 DSGVO', 'Art. 18 DSGVO', 'Art. 12 Abs. 4 DSGVO'],
+            obligations: [
+                { id: 'OBL-RES-1', text: 'Daten in allen Systemen für die weitere Verarbeitung sperren.' },
+                { id: 'OBL-RES-2', text: 'Löschung nach Ablauf der Aufbewahrungsfrist terminieren.' }
+            ]
+        },
+        {
+            id: 'A17-ERASED', scope: 'art17', when: { erasure_exception: 'no' },
+            effect: 'ALLOW', action: 'generate_response_letter', template: 'erasure_confirmed',
+            label: 'Löschung bestätigen', verdict: 'Vollständig gelöscht',
+            legalBasis: ['Art. 17 Abs. 1 DSGVO'],
+            conditionalBasis: [
+                { when: { public_data: 'yes' }, basis: 'Art. 17 Abs. 2 DSGVO' },
+                { when: { recipients: 'yes' }, basis: 'Art. 19 DSGVO' }
+            ],
+            obligations: [
+                { id: 'OBL-ERA-1', text: 'Löschung vor dem Versand in allen Systemen durchführen und dokumentieren.' },
+                { id: 'OBL-ERA-2', text: 'Andere Verantwortliche über das Löschbegehren informieren.', when: { public_data: 'yes' } },
+                { id: 'OBL-ERA-3', text: 'Alle Empfänger über die Löschung informieren.', when: { recipients: 'yes' } }
+            ]
+        },
+
+        // ---------- Art. 12 Abs. 3 ----------
+        {
+            id: 'A12-DENY-LATE', scope: 'art12_3', when: { within_first_month: 'no' },
+            effect: 'DENY', verdict: 'Rechtswidrig (Fristversäumnis)',
+            label: 'Keine Aktion zulässig',
+            blockReason: 'Die Voraussetzungen für eine Fristverlängerung nach Art. 12 Abs. 3 DSGVO liegen nicht vor, da der erste Monat bereits verstrichen ist. Der Versand einer Verlängerungsmitteilung wäre rechtswidrig.',
+            legalBasis: ['Art. 12 Abs. 3 DSGVO']
+        },
+        {
+            id: 'A12-DENY-GROUND', scope: 'art12_3', when: { complex_request: 'no' },
+            effect: 'DENY', verdict: 'Unzulässig (kein Verlängerungsgrund)',
+            label: 'Keine Aktion zulässig',
+            blockReason: 'Eine Fristverlängerung nach Art. 12 Abs. 3 DSGVO setzt Komplexität oder eine Vielzahl von Anträgen voraus. Ohne diesen Grund ist die Anfrage innerhalb eines Monats zu beantworten.',
+            legalBasis: ['Art. 12 Abs. 3 DSGVO']
+        },
+        {
+            id: 'A12-EXTEND', scope: 'art12_3', when: { complex_request: 'yes', within_first_month: 'yes' },
+            effect: 'ALLOW', action: 'generate_response_letter', template: 'extension_notice',
+            label: 'Fristverlängerung mitteilen', verdict: 'Verlängert',
+            legalBasis: ['Art. 12 Abs. 3 DSGVO'],
+            obligations: [
+                { id: 'OBL-EXT-1', text: 'Neues Fristende im Fristenrechner berechnen und überwachen.' }
+            ]
+        }
+    ]
+};
+
+// ---- src/actions/create-action.js ----
+/**
+ * @file Action-Fabrik (Execution / Enforcement)
+ * Jedes Rule Pack bringt eigene Textbausteine mit, der Ablauf ist für alle gleich:
+ * erst authorize() der Engine, dann render(), dann Hash und Audit-Eintrag.
+ * Ohne Freigabe der Engine entsteht kein Dokument.
+ * @author benthy
+ * @license MIT
+ */
+
+
+/**
+ * @param {object} def
+ * @param {string} def.id          Aktions-ID, wie im Rulebook unter metadata.actions definiert
+ * @param {object} def.rulebook    Rulebook des Packs (für Fragetexte und Antwort-Labels)
+ * @param {object} def.templates   Textbausteine: Name -> Funktion(context) -> Text
+ * @param {function} [def.compose] Optional: (template, context) -> Text, z.B. für Briefkopf und Anrede
+ */
+function createAction(def) {
+    const questions = {};
+    def.rulebook.rules.forEach(r => { questions[r.id] = r.question; });
+    const labels = def.rulebook.metadata.answerLabels || {};
+
+    return {
+        id: def.id,
+        templates: def.templates,
+
+        // Rein: gleiche Evaluation + gleicher Payload ergeben stets denselben Text.
+        render(evaluation, payload) {
+            const tpl = def.templates[evaluation.outcome.template];
+            if (typeof tpl !== 'function') throw new Error('Unbekanntes Template: ' + evaluation.outcome.template);
+            const context = {
+                company: payload.company,
+                subject: String(payload.name || '').trim(),
+                date: payload.issueDate,
+                facts: evaluation.input.facts,
+                payload: payload,
+                outcome: evaluation.outcome,
+                reviewer: evaluation.review.reviewer,
+                assessment: evaluation.trace.filter(t => t.state === 'ANSWERED').map(t => ({
+                    ruleId: t.ruleId, question: questions[t.ruleId], answer: labels[t.answer] || t.answer, source: t.source
+                }))
+            };
+            return def.compose ? def.compose(tpl, context) : tpl(context);
+        },
+
+        // Enforcement: ohne Freigabe der Engine entsteht kein Dokument.
+        execute(engine, input, payload) {
+            const evaluation = engine.evaluate(input);
+            const authorization = engine.authorize(this.id, evaluation, payload);
+            if (!authorization.authorized) {
+                engine.log('ACTION_DENIED', {
+                    caseId: evaluation.input.caseId, action: this.id, code: authorization.code,
+                    status: evaluation.status, decision: evaluation.decision, inputHash: evaluation.inputHash
+                });
+                return { executed: false, evaluation: evaluation, authorization: authorization };
+            }
+            engine.log('ACTION_AUTHORIZED', {
+                caseId: evaluation.input.caseId, action: this.id, status: evaluation.status,
+                decision: evaluation.decision, outcome: evaluation.outcome.id, inputHash: evaluation.inputHash
+            });
+            const doc = this.render(evaluation, payload);
+            const documentTextHash = sha256Hex(doc);
+            engine.log('ACTION_EXECUTED', {
+                caseId: evaluation.input.caseId, action: this.id, type: evaluation.input.requestType,
+                outcome: evaluation.outcome.id, verdict: evaluation.outcome.verdict,
+                appliedParagraphs: evaluation.outcome.legalBasis, status: evaluation.status,
+                reviewer: evaluation.review.reviewer, issueDate: payload.issueDate,
+                attachmentIncluded: evaluation.outcome.acceptsAttachment ? !!payload.attachment : null,
+                inputHash: evaluation.inputHash, documentTextHash: documentTextHash
+            });
+            return { executed: true, doc: doc, documentTextHash: documentTextHash, evaluation: evaluation, authorization: authorization };
+        }
+    };
+}
+
+// ---- src/actions/response-letter.js ----
+/**
+ * @file Action: Antwortschreiben (Execution / Enforcement)
+ * Textbausteine des DSGVO-Packs für Betroffenenanfragen. Ablauf und Freigabe: siehe create-action.js.
+ * @author benthy
+ * @license MIT
+ */
+
+
+const RIGHTS_NOTICE = 'Gemäß Art. 12 Abs. 4 DSGVO weisen wir Sie darauf hin, dass Sie das Recht haben, Beschwerde bei einer Datenschutzaufsichtsbehörde einzulegen (Art. 77 DSGVO) oder einen gerichtlichen Rechtsbehelf einzulegen (Art. 79 DSGVO).';
+
+const RESPONSE_LETTER_TEMPLATES = {
+    identity_check: c =>
+        `Betreff: Ihre Datenschutzanfrage – Identitätsprüfung erforderlich\n\n${c.salutation}\n\nwir nehmen Bezug auf Ihre Anfrage. Der Schutz personenbezogener Daten hat für uns höchste Priorität. Gemäß Art. 12 Abs. 6 DSGVO sind wir verpflichtet, bei begründeten Zweifeln an der Identität der anfragenden Person zusätzliche Informationen anzufordern, um eine unbefugte Offenlegung von Daten zu verhindern.\n\nDa wir Ihre Identität anhand der vorliegenden Daten nicht zweifelsfrei feststellen können, bitten wir Sie um einen geeigneten Nachweis (z.B. Verifizierung über Ihr Kundenkonto oder Nennung Ihrer Kundennummer).\n\nDie gesetzliche Bearbeitungsfrist ruht bis zur Klärung.\n\nMit freundlichen Grüßen\n\n${c.company}`,
+
+    refusal_excessive: c =>
+        `Betreff: Ihre Datenschutzanfrage – Ablehnung\n\n${c.salutation}\n\nwir lehnen die Bearbeitung Ihrer Anfrage gemäß Art. 12 Abs. 5 Satz 2 DSGVO ab, da diese offenkundig unbegründet bzw. exzessiv ist.\n\n${RIGHTS_NOTICE}\n\nMit freundlichen Grüßen\n\n${c.company}`,
+
+    negative_disclosure: c =>
+        `Betreff: Ihre Datenschutzanfrage – Negativauskunft\n\n${c.salutation}\n\ngemäß Art. 15 Abs. 1 DSGVO teilen wir Ihnen mit, dass in unserem Unternehmen keine personenbezogenen Daten zu Ihrer Person verarbeitet werden.\n\nMit freundlichen Grüßen\n\n${c.company}`,
+
+    clarification_request: c =>
+        `Betreff: Ihre Datenschutzanfrage – Bitte um Präzisierung\n\n${c.salutation}\n\nwir verarbeiten eine sehr große Menge an Informationen über Sie. Gemäß Erwägungsgrund 63 Satz 7 DSGVO bitten wir Sie, Ihr Auskunftsersuchen auf bestimmte Informationen oder Verarbeitungsvorgänge zu präzisieren.\n\nMit freundlichen Grüßen\n\n${c.company}`,
+
+    full_disclosure: c => {
+        const p = c.payload;
+        const f = c.facts;
+        let n = 0;
+        let doc = `Betreff: Auskunft nach Art. 15 DSGVO\n\n${c.salutation}\n\nhiermit erteilen wir Ihnen die gewünschte Auskunft über die zu Ihrer Person verarbeiteten Daten gemäß Art. 15 DSGVO.\n\n`;
+        doc += `${++n}. Verarbeitungszwecke und Rechtsgrundlagen (Art. 15 Abs. 1 lit. a DSGVO)\nWir verarbeiten Ihre Daten zu folgenden Zwecken: ${p.purposes}\n\n`;
+        doc += `${++n}. Kategorien personenbezogener Daten (Art. 15 Abs. 1 lit. b DSGVO)\nEs werden folgende Datenkategorien verarbeitet: ${p.categories}\n\n`;
+        doc += `${++n}. Empfänger der Daten (Art. 15 Abs. 1 lit. c DSGVO)\nIhre Daten werden gegenüber folgenden Empfängern bzw. Kategorien von Empfängern offengelegt: ${p.recipients}\n\n`;
+        doc += `${++n}. Speicherdauer (Art. 15 Abs. 1 lit. d DSGVO)\nIhre Daten werden gelöscht, sobald sie für die genannten Zwecke nicht mehr erforderlich sind. Konkret: ${p.retention}\n\n`;
+        doc += `${++n}. Ihre Rechte (Art. 15 Abs. 1 lit. e DSGVO)\nSie haben das Recht auf Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18) sowie ein Widerspruchsrecht (Art. 21).\n\n`;
+        doc += `${++n}. Herkunft der Daten (Art. 15 Abs. 1 lit. f DSGVO)\n${p.origin}\n\n`;
+        doc += `${++n}. Automatisierte Entscheidungsfindung (Art. 15 Abs. 1 lit. g DSGVO)\n${p.automated}\n\n`;
+        doc += `${++n}. Beschwerderecht (Art. 15 Abs. 1 lit. h DSGVO)\nSie haben das Recht auf Beschwerde bei einer Aufsichtsbehörde (Art. 77 DSGVO).\n\n`;
+        if (f.third_country === 'yes') {
+            doc += `${++n}. Übermittlung in Drittländer (Art. 15 Abs. 2 DSGVO)\nIhre Daten werden an Empfänger in einem Drittland übermittelt. Geeignete Garantien gemäß Art. 46 DSGVO: ${p.safeguards}\n\n`;
+        }
+        doc += `${++n}. Datenkopie (Art. 15 Abs. 3 DSGVO)\n`;
+        if (p.attachment) {
+            // Nur wenn tatsächlich eine Datenkopie eingebunden ist, darf das Schreiben "anbei" sagen.
+            if (f.electronic_format === 'yes') {
+                doc += `Da Sie den Antrag elektronisch gestellt haben, stellen wir Ihnen die Kopie Ihrer Daten als elektronische Anlage zur Verfügung.\n`;
+            } else {
+                doc += `Anbei erhalten Sie eine Kopie der zu Ihnen verarbeiteten personenbezogenen Daten.\n`;
+            }
+        } else {
+            doc += `Die Kopie Ihrer Daten wird Ihnen in einer separaten Anlage zur Verfügung gestellt.`;
+            if (f.electronic_format === 'yes') {
+                doc += ` Da Sie den Antrag elektronisch gestellt haben, erhalten Sie diese in einem gängigen elektronischen Format.`;
+            }
+            doc += `\n`;
+        }
+        if (f.third_party === 'yes') {
+            doc += `\nHinweis: Zum Schutz der Rechte und Freiheiten anderer Personen (Art. 15 Abs. 4 DSGVO) wurden bestimmte Passagen in der Datenkopie geschwärzt.\n`;
+        }
+        doc += `\nMit freundlichen Grüßen\n\n${c.company}\n\n`;
+        if (p.attachment) doc += `\n${p.attachment}`;
+        return doc;
+    },
+
+    erasure_rejected: c =>
+        `Betreff: Ihre Löschungsanfrage – Ablehnung\n\n${c.salutation}\n\nwir können Ihrem Löschbegehren nicht nachkommen, da kein gesetzlicher Löschgrund nach Art. 17 Abs. 1 DSGVO vorliegt.\n\n${RIGHTS_NOTICE}\n\nMit freundlichen Grüßen\n\n${c.company}`,
+
+    erasure_restricted: c =>
+        `Betreff: Ihre Löschungsanfrage – Einschränkung der Verarbeitung\n\n${c.salutation}\n\nwir können Ihre Daten derzeit nicht vollständig löschen, da gesetzliche Aufbewahrungspflichten (z.B. § 257 HGB, § 147 AO) gemäß Art. 17 Abs. 3 DSGVO entgegenstehen. Wir haben Ihre Daten jedoch für die weitere Verarbeitung gesperrt (Einschränkung der Verarbeitung nach Art. 18 DSGVO).\n\n${RIGHTS_NOTICE}\n\nMit freundlichen Grüßen\n\n${c.company}`,
+
+    erasure_confirmed: c => {
+        let doc = `Betreff: Bestätigung der Löschung nach Art. 17 DSGVO\n\n${c.salutation}\n\nwir bestätigen hiermit, dass wir Ihre personenbezogenen Daten antragsgemäß und vollständig gelöscht haben.\n`;
+        if (c.facts.public_data === 'yes') {
+            doc += `\nGemäß Art. 17 Abs. 2 DSGVO haben wir zudem angemessene Maßnahmen getroffen, um andere Verantwortliche, die diese Daten verarbeiten, über Ihr Löschbegehren zu informieren.\n`;
+        }
+        if (c.facts.recipients === 'yes') {
+            doc += `\nGemäß Art. 19 DSGVO haben wir zudem alle Empfänger, denen Ihre Daten offengelegt wurden, über diese Löschung informiert.\n`;
+        }
+        doc += `\nMit freundlichen Grüßen\n\n${c.company}`;
+        return doc;
+    },
+
+    extension_notice: c =>
+        `Betreff: Ihre Datenschutzanfrage – Fristverlängerung\n\n${c.salutation}\n\nwir bestätigen den Eingang Ihrer Anfrage. Gemäß Art. 12 Abs. 3 DSGVO informieren wir Sie hiermit, dass wir die reguläre Bearbeitungsfrist von einem Monat um weitere zwei Monate verlängern müssen.\n\nGrund für die Verlängerung ist die hohe Komplexität Ihrer Anfrage, die eine umfangreiche Prüfung diverser Systeme erfordert.\n\nWir werden Ihnen die Antwort unaufgefordert zukommen lassen.\n\nMit freundlichen Grüßen\n\n${c.company}`
+};
+
+const ResponseLetterAction = createAction({
+    id: 'generate_response_letter',
+    rulebook: DSARRulebook,
+    templates: RESPONSE_LETTER_TEMPLATES,
+    // Ohne Namen: neutrale Anrede, keine Namenszeile im Briefkopf.
+    compose(tpl, c) {
+        const salutation = c.subject ? `Sehr geehrte(r) ${c.subject},` : 'Sehr geehrte Damen und Herren,';
+        const head = `${c.company}\n\n` + (c.subject ? `${c.subject}\n\n` : '') + `Datum: ${c.date}\n\n`;
+        return head + tpl(Object.assign({}, c, { salutation: salutation }));
+    }
+});
+
+// ---- src/ingestion/dsar-parser.js ----
+/**
+ * @file Smart Ingestion für Betroffenenanfragen
+ * Liest den Text einer Anfrage und liefert Vorschläge. Vorschläge sind keine Fakten:
+ * Die Engine wertet nur aus, was der Nutzer aktiv bestätigt.
+ * @author benthy
+ * @license MIT
+ */
+
+function parseDsarRequest(text) {
+    // Strict Priority Parsing
+    let requestType = 'art15'; // Fallback, wird unten begründet
+    const reasoning = [];
+    const suggestions = {};
+
+    if (/(art\.?\s*17|löschung|löschen|vergessenwerden)/i.test(text)) {
+        requestType = 'art17';
+        reasoning.push("Als Art. 17 (Löschung) klassifiziert, da explizite Lösch-Schlüsselwörter gefunden wurden.");
+    } else if (/(art\.?\s*12\s*abs\.?\s*3|fristverlängerung)/i.test(text)) {
+        requestType = 'art12_3';
+        reasoning.push("Als Art. 12 Abs. 3 klassifiziert, da explizit Fristverlängerung angefragt wurde.");
+    } else if (/(art\.?\s*15|auskunft|datenkopie)/i.test(text)) {
+        requestType = 'art15';
+        reasoning.push("Als Art. 15 (Auskunft) klassifiziert, da Auskunft/Datenkopie explizit genannt wurde.");
+    } else {
+        reasoning.push("Keine eindeutigen Artikel gefunden. Fallback auf Art. 15 (Auskunft).");
+    }
+
+    let subject = '';
+    const nameMatch = text.match(/(?:Mit freundlichen Grüßen|Freundliche Grüße|Viele Grüße|Beste Grüße|Grüße|Gruß)[,!.]?[ \t]*(?:\r?\n)+[ \t]*([A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß .'-]{1,80})/i);
+    if (nameMatch && nameMatch[1].trim().length > 2) subject = nameMatch[1].trim();
+
+    if (/(anwalt|rechtsbeistand|klage)/i.test(text)) {
+        reasoning.push("Flag: Anwalt/Klage erkannt.");
+    }
+    if (/(ausweis|identitätsnachweis)/i.test(text)) {
+        suggestions.id_doubt = 'yes';
+        reasoning.push("Flag: Ausweis/Identitätsnachweis erwähnt -> Identitätszweifel als Vorschlag hinterlegt.");
+    }
+    if (/(frist)/i.test(text) && requestType !== 'art12_3') {
+        reasoning.push("Flag: 'Frist' erkannt. Wurde als Fristsetzung des Betroffenen gewertet, ändert nicht den Anfrage-Typ.");
+    }
+
+    return { requestType: requestType, subject: subject, suggestions: suggestions, reasoning: reasoning };
+}
+
+// ---- src/domain/content.js ----
+/**
+ * @file Fachinhalte: Wissensdatenbank, Fallbeispiele, Branchen-Presets
+ * Reine Daten für die Oberfläche.
+ * @author benthy
+ * @license MIT
+ */
+
+const knowledgeBase = [
+    { title: "Identitätsprüfung", basis: "Art. 12 Abs. 6 DSGVO", body: "Der Verantwortliche muss die Identität der anfragenden Person prüfen, um die Offenlegung von Daten an unbefugte Dritte (Data Breach) zu verhindern. Zusätzliche Informationen dürfen jedoch nur bei 'begründeten Zweifeln' angefordert werden. Eine systematische, pauschale Anforderung von Ausweiskopien ist unzulässig. Laut DSK-Kurzpapier Nr. 6 stellt die Ausweiskopie nur die Ultima Ratio dar, wenn andere Mittel (z.B. Verifizierung über ein bestehendes Kundenkonto, Abfrage von Kundennummern oder Transaktionsdaten) nicht ausreichen. Der Ausweis darf zudem geschwärzt werden." },
+    { title: "Negativauskunft", basis: "Art. 15 Abs. 1 DSGVO", body: "Das Auskunftsrecht umfasst zunächst die Bestätigung, ob betreffende personenbezogene Daten verarbeitet werden. Werden keine Daten des Antragstellers verarbeitet, ist der Verantwortliche zwingend verpflichtet, dies ausdrücklich mitzuteilen (sog. Negativauskunft). Ein bloßes Ignorieren der Anfrage, weil man den Betroffenen nicht im System findet, stellt einen bußgeldbewehrten Verstoß gegen Art. 15 DSGVO dar. Die Frist von einem Monat gilt auch für die Erteilung der Negativauskunft." },
+    { title: "Umfang der Datenkopie", basis: "Art. 15 Abs. 3 DSGVO", body: "Der Verantwortliche muss eine unentgeltliche Kopie der personenbezogenen Daten zur Verfügung stellen. Der EuGH (C-487/21) hat klargestellt, dass der Begriff 'Kopie' eine originalgetreue und verständliche Reproduktion der Daten erfordert. Dies bedeutet, dass der Betroffene in die Lage versetzt werden muss, seine Rechte wirksam auszuüben. Wenn der Kontext der verarbeiteten Daten sonst unverständlich wäre, kann dies die Herausgabe von Auszügen aus Dokumenten oder sogar von ganzen Dokumenten (z.B. E-Mails, Gesprächsnotizen) erfordern. Eine bloße tabellarische Zusammenfassung reicht oft nicht aus." },
+    { title: "Rechte Dritter", basis: "Art. 15 Abs. 4 DSGVO", body: "Das Recht auf Erhalt einer Datenkopie darf die Rechte und Freiheiten anderer Personen nicht beeinträchtigen. Hierzu zählen insbesondere Geschäftsgeheimnisse, geistiges Eigentum oder die Datenschutzrechte Dritter (z.B. Namen anderer Personen in einer E-Mail). Dies führt jedoch in der Regel nicht zu einer vollständigen Verweigerung der Auskunft. Vielmehr ist der Verantwortliche gehalten, das mildeste Mittel zu wählen, was in der Praxis bedeutet, dass die schutzwürdigen Passagen in den herauszugebenden Dokumenten geschwärzt werden müssen." },
+    { title: "Fristverlängerung", basis: "Art. 12 Abs. 3 DSGVO", body: "Die gesetzliche Grundfrist zur Beantwortung einer Betroffenenanfrage beträgt einen Monat ab Eingang. Bei besonders komplexen Anfragen (z.B. extrem unstrukturierte Datenbestände, Notwendigkeit der Sichtung tausender E-Mails) oder bei einer Vielzahl von Anträgen kann diese Frist um weitere zwei Monate verlängert werden. Zwingende Voraussetzung ist jedoch, dass die betroffene Person innerhalb des ersten Monats über die Fristverlängerung und die konkreten Gründe hierfür informiert wird. Ein bloßer Personalengpass rechtfertigt keine Verlängerung." },
+    { title: "Löschgründe", basis: "Art. 17 Abs. 1 DSGVO", body: "Das Recht auf Löschung ('Recht auf Vergessenwerden') ist kein absolutes Recht. Eine Löschungspflicht besteht nur, wenn einer der in Art. 17 Abs. 1 genannten Gründe vorliegt. Die wichtigsten Praxis-Fälle sind: Die Daten sind für die Zwecke, für die sie erhoben wurden, nicht mehr notwendig (Zweckentfall); die betroffene Person widerruft ihre Einwilligung (und es gibt keine andere Rechtsgrundlage); die betroffene Person legt berechtigt Widerspruch ein; oder die Daten wurden unrechtmäßig verarbeitet." },
+    { title: "Löschausnahmen", basis: "Art. 17 Abs. 3 DSGVO", body: "Selbst wenn ein Löschgrund vorliegt, entfällt die Löschungspflicht, wenn eine Ausnahme nach Art. 17 Abs. 3 DSGVO greift. In der Unternehmenspraxis ist die wichtigste Ausnahme die Erfüllung einer rechtlichen Verpflichtung (lit. b). Hierzu zählen insbesondere die handels- und steuerrechtlichen Aufbewahrungsfristen (z.B. 10 Jahre für Rechnungen nach § 147 AO, 6 Jahre für Geschäftsbriefe nach § 257 HGB). Auch die Geltendmachung, Ausübung oder Verteidigung von Rechtsansprüchen (lit. e) hemmt die Löschung. Die Daten dürfen dann nicht gelöscht, müssen aber nach Art. 18 DSGVO für andere Zwecke gesperrt (eingeschränkt) werden." },
+    { title: "Mitteilungspflicht", basis: "Art. 19 DSGVO", body: "Wurden personenbezogene Daten gelöscht, berichtigt oder ihre Verarbeitung eingeschränkt, trifft den Verantwortlichen eine Nachberichtspflicht. Er muss allen Empfängern, denen diese Daten zuvor offengelegt wurden (z.B. Auftragsverarbeitern, Partnerunternehmen), diese Maßnahme mitteilen. Die Empfänger müssen die Löschung dann in ihren eigenen Systemen nachvollziehen. Diese Pflicht entfällt nur, wenn sich die Mitteilung als unmöglich erweist oder mit einem unverhältnismäßigen Aufwand verbunden ist. Der Betroffene hat das Recht, über diese Empfänger unterrichtet zu werden." },
+    { title: "Meldung von Datenpannen", basis: "Art. 33 DSGVO", body: "Wird dem Verantwortlichen eine Verletzung des Schutzes personenbezogener Daten bekannt, muss er sie unverzüglich und möglichst binnen 72 Stunden der zuständigen Aufsichtsbehörde melden. Die Meldung entfällt nur, wenn die Verletzung voraussichtlich nicht zu einem Risiko für die Rechte und Freiheiten natürlicher Personen führt. Erfolgt die Meldung später, ist die Verzögerung zu begründen. Liegen noch nicht alle Angaben vor, dürfen sie schrittweise nachgereicht werden. Unabhängig von der Meldepflicht ist jede Verletzung mit ihren Auswirkungen und den ergriffenen Abhilfemaßnahmen zu dokumentieren (Abs. 5). Auftragsverarbeiter melden eine Verletzung unverzüglich dem Verantwortlichen (Abs. 2)." },
+    { title: "Benachrichtigung der Betroffenen", basis: "Art. 34 DSGVO", body: "Hat die Verletzung voraussichtlich ein hohes Risiko für die persönlichen Rechte und Freiheiten zur Folge, sind zusätzlich die betroffenen Personen unverzüglich zu benachrichtigen, und zwar in klarer und einfacher Sprache. Die Benachrichtigung kann entfallen, wenn die Daten durch geeignete Maßnahmen wie Verschlüsselung für Unbefugte unzugänglich waren, wenn nachträgliche Maßnahmen das hohe Risiko aller Wahrscheinlichkeit nach beseitigt haben oder wenn sie einen unverhältnismäßigen Aufwand bedeuten würde. Im letzten Fall tritt an ihre Stelle eine öffentliche Bekanntmachung oder eine ähnlich wirksame Maßnahme." }
+];
+
+// verified: false = Fundstelle konnte nicht gegen eine Primärquelle abgeglichen werden.
+const caseDatabase = [
+    { court: "EuGH", az: "C-487/21", verified: true, summary: "Sachverhalt: Ein Bürger verlangte von einer Auskunftei eine Kopie seiner Daten. Die Auskunftei lieferte nur eine aggregierte Tabelle. Leitsatz: Der Begriff 'Kopie' in Art. 15 Abs. 3 DSGVO erfordert eine originalgetreue und verständliche Reproduktion. Dies kann die Herausgabe von Auszügen oder ganzen Dokumenten erfordern, wenn der Kontext sonst fehlt. Auswirkung: Tabellarische Zusammenfassungen reichen oft nicht mehr aus." },
+    { court: "EuGH", az: "C-154/21", verified: true, summary: "Sachverhalt: Die Österreichische Post gab bei einer Auskunft nur Kategorien von Empfängern an, an die Daten verkauft wurden. Leitsatz: Verantwortliche müssen bei der Auskunft über Empfänger (Art. 15 Abs. 1 lit. c) grundsätzlich die konkrete Identität der Empfänger mitteilen. Die Nennung bloßer Kategorien ist nur zulässig, wenn die Identifizierung unmöglich ist oder der Antrag exzessiv ist." },
+    { court: "EuGH", az: "C-307/22", verified: true, summary: "Sachverhalt: Ein Patient verlangte eine Kopie seiner Patientenakte. Der Arzt forderte hierfür Kostenersatz nach nationalem Recht. Leitsatz: Die erste Kopie der personenbezogenen Daten muss zwingend unentgeltlich zur Verfügung gestellt werden. Nationale Regelungen, die Kosten zum Schutz wirtschaftlicher Interessen des Verantwortlichen vorsehen, sind unanwendbar. Der Anspruch besteht auch dann, wenn der Antrag anderen Zwecken dient als der Überprüfung der Rechtmäßigkeit der Verarbeitung; das Motiv des Betroffenen ist grundsätzlich unerheblich." },
+    { court: "EuGH", az: "C-434/16", verified: true, summary: "Sachverhalt: Ein Prüfling verlangte Zugang zu seiner korrigierten Prüfungsarbeit; die Stelle lehnte ab, weil es sich nicht um personenbezogene Daten handele (Rechtssache Nowak). Leitsatz: Schriftliche Prüfungsantworten und die Anmerkungen des Prüfers dazu sind personenbezogene Daten des Prüflings. Auswirkung: Der Begriff der personenbezogenen Daten und damit der Umfang des Auskunftsrechts ist weit zu verstehen." },
+    { court: "EuGH", az: "C-131/12", verified: true, summary: "Sachverhalt: Ein Spanier klagte gegen Google, da alte Zeitungsartikel über eine Pfändung bei Namenssuche erschienen. Leitsatz: Etablierung des 'Rechts auf Vergessenwerden'. Suchmaschinenbetreiber sind Verantwortliche und müssen unter bestimmten Voraussetzungen Links zu rechtmäßig veröffentlichten Artikeln aus der Ergebnisliste entfernen, wenn das Interesse des Betroffenen überwiegt." },
+    { court: "EuGH", az: "C-634/21", verified: true, summary: "Sachverhalt: Die SCHUFA berechnete einen Score-Wert, der von Banken maßgeblich für die Kreditvergabe genutzt wurde. Leitsatz: Die Erstellung eines Score-Werts kann bereits eine automatisierte Entscheidung im Einzelfall nach Art. 22 DSGVO darstellen, wenn Dritte (Banken) diesem Wert maßgebliche Bedeutung beimessen. Auswirkung: Strenge Anforderungen an die Transparenz der Scoring-Logik." },
+    { court: "EuGH", az: "C-579/21", verified: true, summary: "Sachverhalt: Ein Bankmitarbeiter, der zugleich Kunde war, verlangte Auskunft darüber, wer wann und warum auf seine Kundendaten zugegriffen hat (Rechtssache Pankki S). Leitsatz: Das Auskunftsrecht umfasst Informationen aus Protokolldaten über Zeitpunkt und Zweck der Abfragen. Die Identität der Beschäftigten, die die Abfragen weisungsgemäß vorgenommen haben, ist dagegen grundsätzlich nicht mitzuteilen, es sei denn, sie ist für die wirksame Ausübung der Betroffenenrechte unerlässlich und die Rechte der Beschäftigten werden berücksichtigt." },
+    { court: "BVerwG", az: "6 C 10.19", verified: true, summary: "Sachverhalt: Ein Insolvenzverwalter verlangte vom Finanzamt unter Berufung auf Art. 15 DSGVO Auskunft über das Steuerkonto des Insolvenzschuldners. Leitsatz: Der Insolvenzverwalter ist nicht 'betroffene Person'. Das Auskunftsrecht ist höchstpersönlich und geht nicht auf ihn über. Auswirkung: Vor einer Auskunft ist zu prüfen, ob der Anfragende selbst die betroffene Person ist oder wirksam für sie handelt." },
+    { court: "EDSA", az: "Leitlinien 01/2022", verified: true, summary: "Gegenstand: Leitlinien des Europäischen Datenschutzausschusses zum Auskunftsrecht. Kernaussage zur Identitätsprüfung: Zusätzliche Nachweise dürfen nur verlangt werden, wenn sie erforderlich und verhältnismäßig sind. Kann der Verantwortliche die Person über vorhandene Merkmale (z.B. Login, bestätigte E-Mail-Adresse) identifizieren, ist die Anforderung einer Ausweiskopie in der Regel unangemessen." },
+    { court: "DSB Österreich", az: "2021-0.586.257", verified: false, summary: "Sachverhalt: Ein Unternehmen ignorierte eine Auskunftsanfrage, da es den Anfragenden nicht in seiner Datenbank fand. Leitsatz: Die fehlende Erteilung einer Negativauskunft stellt einen Verstoß gegen Art. 15 DSGVO dar. Auch wenn keine Daten verarbeitet werden, muss der Verantwortliche innerhalb der Monatsfrist antworten." },
+    { court: "LfDI BW", az: "Bußgeldbescheid 2021", verified: false, summary: "Sachverhalt: Ein Unternehmen ließ eine Auskunftsanfrage monatelang unbeantwortet. Leitsatz: Das Ignorieren von Betroffenenrechten wird von den Aufsichtsbehörden streng sanktioniert. Die Verhängung eines Bußgeldes erfolgte allein wegen der Fristversäumnis und der Nichtbeachtung der Rechte aus Art. 15 DSGVO." }
+];
+
+const presets = {
+    agency: {
+        purposes: "Vertragsabwicklung (Art. 6 Abs. 1 lit. b DSGVO), Kundenkommunikation, Buchhaltung zur Erfüllung rechtlicher Pflichten (Art. 6 Abs. 1 lit. c DSGVO).",
+        categories: "Stammdaten (Name, Adresse), Kommunikationsdaten (E-Mail, Telefon), Vertrags- und Abrechnungsdaten.",
+        recipients: "Hosting-Dienstleister mit Serverstandort in der EU, CRM-System-Anbieter, Steuerberater / Wirtschaftsprüfer zur Erfüllung steuerlicher Pflichten.",
+        retention: "10 Jahre für steuerrelevante Unterlagen (§ 147 AO), 6 Jahre für Handelsbriefe (§ 257 HGB). Sonstige Daten nach Wegfall des Zwecks."
+    },
+    ecommerce: {
+        purposes: "Bestellabwicklung, Zahlungsabwicklung, Versand (Art. 6 Abs. 1 lit. b DSGVO), Direktwerbung bei Bestandskunden (Art. 6 Abs. 1 lit. f DSGVO).",
+        categories: "Stammdaten, Bestelldaten, Zahlungsdaten, IP-Adressen bei Bestellabschluss.",
+        recipients: "Zahlungsdienstleister zur Abwicklung von Transaktionen, Versanddienstleister, ERP-System-Anbieter.",
+        retention: "10 Jahre für Rechnungen (§ 147 AO), 6 Jahre für Geschäftsbriefe (§ 257 HGB). Gewährleistungsdaten 3 Jahre."
+    },
+    saas: {
+        purposes: "Bereitstellung der Software-as-a-Service, Nutzerauthentifizierung, Abrechnung (Art. 6 Abs. 1 lit. b DSGVO), System-Sicherheit (Art. 6 Abs. 1 lit. f DSGVO).",
+        categories: "Account-Daten, Nutzungsdaten (Logfiles), Zahlungsdaten.",
+        recipients: "Cloud-Infrastruktur-Provider in der EU, Zahlungsabwickler, E-Mail-Versanddienstleister.",
+        retention: "Bis zur Löschung des Accounts, danach gesetzliche Aufbewahrungsfristen für Rechnungsdaten (10 Jahre)."
+    },
+    coaching: {
+        purposes: "Terminvereinbarung, Durchführung von Beratungsgesprächen (Art. 6 Abs. 1 lit. b DSGVO), Rechnungsstellung.",
+        categories: "Stammdaten, Kommunikationsdaten, Beratungsnotizen.",
+        recipients: "Videokonferenz-Anbieter, Kalender-Tool-Anbieter, Buchhaltungssoftware-Anbieter.",
+        retention: "10 Jahre für Rechnungen (§ 147 AO). Beratungsnotizen bis zum Ende der vertraglichen Beziehung."
+    }
+};
+
+// ---- src/domain/deadline.js ----
+/**
+ * @file Fristenrechner (BGB / VO 1182/71) mit Feiertagslogik
+ * Reine Funktionen ohne DOM-Zugriff. Landesfeiertage gelten erst ab ihrem Einführungsjahr.
+ * @author benthy
+ * @license MIT
+ */
+
+const pad2 = n => String(n).padStart(2, '0');
+const formatDateDE = d => `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
+const toISODateLocal = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const addDays = (date, days) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+
+function parseLocalDate(str) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str || '');
+    if (!m) return null;
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return (d.getMonth() === Number(m[2]) - 1 && d.getDate() === Number(m[3])) ? d : null;
+}
+
+function getEasterSunday(year) {
+    const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+    const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31);
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(year, month - 1, day);
+}
+
+function getHolidays(year, stateCode) {
+    const easter = getEasterSunday(year);
+    const format = d => `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    const holidays = {
+        "01-01": "Neujahr", "05-01": "Tag der Arbeit", "10-03": "Tag der Deutschen Einheit",
+        "12-25": "1. Weihnachtsfeiertag", "12-26": "2. Weihnachtsfeiertag",
+        [format(addDays(easter, -2))]: "Karfreitag", [format(addDays(easter, 1))]: "Ostermontag",
+        [format(addDays(easter, 39))]: "Christi Himmelfahrt", [format(addDays(easter, 50))]: "Pfingstmontag"
+    };
+    // Feiertage mit Stichjahr: Sie gelten erst ab ihrer Einführung, nicht rückwirkend.
+    if (['BW', 'BY', 'ST'].includes(stateCode)) holidays["01-06"] = "Heilige Drei Könige";
+    if ((stateCode === 'BE' && year >= 2019) || (stateCode === 'MV' && year >= 2023)) holidays["03-08"] = "Internationaler Frauentag";
+    if (stateCode === 'BE' && (year === 2020 || year === 2025)) holidays["05-08"] = "Tag der Befreiung (einmaliger Feiertag in Berlin)";
+    if (stateCode === 'BE' && year === 2028) holidays["06-17"] = "Jahrestag des Volksaufstands vom 17. Juni 1953 (einmaliger Feiertag in Berlin)";
+    if (['BW', 'BY', 'HE', 'NW', 'RP', 'SL'].includes(stateCode)) holidays[format(addDays(easter, 60))] = "Fronleichnam";
+    if (['BY', 'SL'].includes(stateCode)) holidays["08-15"] = "Mariä Himmelfahrt";
+    if (stateCode === 'TH' && year >= 2019) holidays["09-20"] = "Weltkindertag";
+    if (['BB', 'MV', 'SN', 'ST', 'TH'].includes(stateCode)
+        || (['HB', 'HH', 'NI', 'SH'].includes(stateCode) && year >= 2018)
+        || year === 2017) holidays["10-31"] = "Reformationstag";
+    if (['BW', 'BY', 'NW', 'RP', 'SL'].includes(stateCode)) holidays["11-01"] = "Allerheiligen";
+    if (stateCode === 'SN') {
+        const nov23 = new Date(year, 10, 23);
+        let daysToWed = (nov23.getDay() + 4) % 7;
+        if (daysToWed === 0) daysToWed = 7;
+        holidays[format(addDays(nov23, -daysToWed))] = "Buß- und Bettag";
+    }
+    return holidays;
+}
+
+function addMonths(date, months) {
+    const d = new Date(date.getTime());
+    const expectedMonth = ((d.getMonth() + months) % 12 + 12) % 12;
+    d.setMonth(d.getMonth() + months);
+    if (d.getMonth() !== expectedMonth) {
+        d.setDate(0); // Clamp to last day of the intended month (§ 188 Abs. 3 BGB)
+    }
+    return d;
+}
+
+// Ob für DSGVO-Fristen das BGB oder die Fristen-Verordnung (EWG, Euratom) Nr. 1182/71 gilt, ist umstritten.
+const DEADLINE_CAVEAT = 'Orientierungswert nach BGB / VO 1182/71 (praxisüblich, aber im Detail umstritten)';
+const GDPR_APPLICABLE_FROM = new Date(2018, 4, 25);
+
+// Rein: liefert Fristende und Protokoll, ohne DOM-Zugriff.
+function computeDeadline(receiptDate, stateCode, extended) {
+    let endDate = addMonths(receiptDate, extended ? 3 : 1);
+    const steps = [
+        `Ereignis (Eingang): ${formatDateDE(receiptDate)} (§ 187 Abs. 1 BGB)`,
+        `Reguläres Fristende: ${formatDateDE(endDate)} (§ 188 Abs. 2 BGB)`
+    ];
+    let shifted = false;
+    while (true) {
+        const dayOfWeek = endDate.getDay();
+        const md = `${pad2(endDate.getMonth() + 1)}-${pad2(endDate.getDate())}`;
+        const holidays = getHolidays(endDate.getFullYear(), stateCode);
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+            steps.push(`Verschiebung wegen Wochenende: ${WEEKDAYS[dayOfWeek]}, ${formatDateDE(endDate)}`);
+            endDate = addDays(endDate, 1); shifted = true;
+        } else if (holidays[md]) {
+            steps.push(`Verschiebung wegen Feiertag: ${holidays[md]}`);
+            endDate = addDays(endDate, 1); shifted = true;
+        } else { break; }
+    }
+    if (shifted) steps.push(`Verschiebung auf den nächsten Werktag (§ 193 BGB bzw. Art. 3 Abs. 4 VO 1182/71): ${formatDateDE(endDate)}. ${DEADLINE_CAVEAT}.`);
+    else steps.push(`Keine Verschiebung erforderlich. ${DEADLINE_CAVEAT}.`);
+    return { endDate: endDate, steps: steps, shifted: shifted };
+}
+
+// ---- src/domain/attachment.js ----
+/**
+ * @file Datenkopie: CSV/JSON in eine lesbare Textanlage umformen
+ * Reine Funktionen ohne DOM-Zugriff.
+ * @author benthy
+ * @license MIT
+ */
+
+function splitCsvLine(line, delim) {
+    const out = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (inQuotes) {
+            if (ch === '"') {
+                if (line[i + 1] === '"') { cur += '"'; i++; } else { inQuotes = false; }
+            } else { cur += ch; }
+        } else if (ch === '"') { inQuotes = true; }
+        else if (ch === delim) { out.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+    }
+    out.push(cur.trim());
+    return out;
+}
+
+function formatAttachment(filename, content) {
+    let formatted = "--- DATENKOPIE GEMÄSS ART. 15 ABS. 3 DSGVO ---\n";
+    formatted += "HINWEIS: Bitte prüfen Sie diese Rohdaten vor dem Versand auf Rechte Dritter (Art. 15 Abs. 4 DSGVO) und schwärzen Sie diese gegebenenfalls.\n\n";
+    const lower = filename.toLowerCase();
+    try {
+        if (lower.endsWith('.json')) {
+            formatted += JSON.stringify(JSON.parse(content), null, 2);
+        } else if (lower.endsWith('.csv')) {
+            const lines = content.replace(/^\uFEFF/, '').split(/\r?\n/).filter(l => l.trim());
+            const first = lines[0] || '';
+            const count = ch => first.split(ch).length - 1;
+            const delim = count(';') > count(',') ? ';' : (count('\t') > count(',') ? '\t' : ',');
+            lines.forEach(line => { formatted += splitCsvLine(line, delim).join(' | ') + '\n'; });
+        } else {
+            formatted += content;
+        }
+    } catch (err) {
+        formatted += "Fehler beim Parsen der Datei. Rohdaten:\n" + content;
+    }
+    return formatted;
+}
+
+// ---- src/ui/dom.js ----
+/**
+ * @file DOM-Helfer
+ * Kleine, fachfreie Hilfsfunktionen für die Oberfläche. Texte werden immer über textContent gesetzt (XSS-sicher).
+ * @author benthy
+ * @license MIT
+ */
+
+const $ = id => document.getElementById(id);
+
+// DOM Helper (XSS Safe)
+const el = (tag, text, className) => {
+    const e = document.createElement(tag);
+    if (text !== undefined && text !== null) e.textContent = text;
+    if (className) e.className = className;
+    return e;
+};
+
+function haltApplication(title, message) {
+    document.title = 'Systemfehler – DSAR Regel-Engine';
+    const body = document.body;
+    body.textContent = '';
+    const box = document.createElement('div');
+    box.id = 'fatal-error';
+    box.setAttribute('role', 'alert');
+    box.style.cssText = 'max-width:720px;margin:80px auto;padding:32px;border:2px solid #B91C1C;border-radius:8px;background:#FEE2E2;color:#7f1d1d;font-family:system-ui,sans-serif;line-height:1.6;';
+    const h = document.createElement('h1');
+    h.textContent = title;
+    h.style.cssText = 'color:#7f1d1d;font-size:1.5rem;margin:0 0 12px;';
+    const p = document.createElement('p');
+    p.textContent = message;
+    p.style.margin = '0';
+    box.appendChild(h);
+    box.appendChild(p);
+    body.appendChild(box);
+}
+
+function downloadFile(filename, content) {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+function copyText(text, button) {
+    const original = button.textContent;
+    const done = ok => {
+        button.textContent = ok ? 'Kopiert' : 'Kopieren nicht möglich';
+        setTimeout(() => { button.textContent = original; }, 1500);
+    };
+    const fallback = () => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+        document.body.removeChild(ta);
+        done(ok);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => done(true), fallback);
+    } else {
+        fallback();
+    }
+}
+
+// ---- src/ui/packs.js ----
+/**
+ * @file Registry der Rule Packs für die Oberfläche
+ * Ein Pack besteht aus Rulebook (Daten), Action (Textbausteine), Parser (Vorschläge) und Beschriftungen.
+ * Die Engine wird dafür nicht angefasst: Ein neues Pack ist ein neuer Eintrag in dieser Liste.
+ * @author benthy
+ * @license MIT
+ */
+
+
+const RULE_PACKS = [
+    {
+        rulebook: DSARRulebook,
+        action: ResponseLetterAction,
+        parse: parseDsarRequest,
+        presets: {
+            title: 'Branchen-Presets (Pflichtangaben Art. 15)',
+            intro: 'Wählen Sie ein Profil, um die Pflichtangaben nach Art. 15 Abs. 1 lit. a-h DSGVO mit generischen, rechtlich korrekten Begriffen vorzubelegen, oder füllen Sie die Felder manuell aus.',
+            options: [
+                { id: 'agency', label: 'Digitalagentur / Webentwicklung' },
+                { id: 'ecommerce', label: 'E-Commerce / Online-Shop' },
+                { id: 'saas', label: 'SaaS / Software-Anbieter' },
+                { id: 'coaching', label: 'Coaching & Dienstleistungen' }
+            ],
+            values: presets
+        },
+        text: {
+            ingestIntro: 'Fügen Sie die E-Mail des Betroffenen ein. Der Parser analysiert den Text, erkennt den Anfrage-Typ und erzeugt Vorschläge für die nachfolgende Prüfung. Vorschläge sind keine Fakten: Die Engine wertet ausschließlich aktiv bestätigte Antworten aus.',
+            ingestLabel: 'E-Mail-Text der betroffenen Person',
+            ingestPlaceholder: 'Sehr geehrte Damen und Herren, hiermit fordere ich Auskunft nach Art. 15 DSGVO...',
+            ingestMissing: 'Bitte fügen Sie zuerst den Text der Anfrage ein.',
+            suggestionSource: 'E-Mail',
+            subjectLabel: 'Erkannter Name der betroffenen Person',
+            subjectHint: 'Bleibt das Feld leer, verwendet das Schreiben die Anrede „Sehr geehrte Damen und Herren“.',
+            actionButton: 'Aktion ausführen: Schreiben generieren',
+            resultTitle: 'Schritt 4: Ausgeführte Aktion – Antwortschreiben',
+            resultIntro: 'Dieses Schreiben wurde erst erzeugt, nachdem die Engine die Aktion freigegeben hat. Es basiert deterministisch auf Ihren bestätigten Eingaben und enthält keine Platzhalter.',
+            exportLabel: 'Schreiben (.txt) speichern',
+            filePrefix: 'DSAR',
+            exportFile: 'DSAR_Antwortschreiben.txt',
+            attachmentWarning: 'Achtung: Es wurde keine Datenkopie eingebunden. Das Schreiben verweist auf eine separate Anlage; diese muss dem Versand beigefügt werden (Art. 15 Abs. 3 DSGVO).'
+        }
+    }
+];
+
+// ---- src/ui/app.js ----
+/**
+ * @file Anwendung / Oberfläche
+ * Verbindet Rule Packs, Engine und Actions mit dem DOM. Einziger Teil mit Browser-Abhängigkeit.
+ * Die Oberfläche kennt kein einzelnes Rechtsgebiet: Fragen, Eingabefelder und Texte kommen aus dem aktiven Rule Pack.
+ * @author benthy
+ * @license MIT
+ */
+
+
+// --- Start: SHA-256 Self-Test. Schlägt er fehl, startet die Anwendung nicht. ---
+if (!sha256SelfTest()) {
+    haltApplication(
+        'Systemfehler: SHA-256 Self-Test fehlgeschlagen',
+        'Die Hash-Funktion liefert für bekannte Testvektoren falsche Ergebnisse. Ein verlässlicher Audit-Trail ist damit nicht möglich. Die Anwendung wurde gestoppt; es werden keine Vorgänge verarbeitet. Bitte verwenden Sie eine unveränderte Kopie der Datei in einem aktuellen Browser.'
+    );
+    throw new Error('SHA-256 Self-Test fehlgeschlagen. Anwendung gestoppt.');
+}
+
+const APP_VERSION = '8.1.0';
+
+const engine = new UniversalRulesEngine({ initDetails: { sha256SelfTest: 'PASSED', testVectors: SHA256_TEST_VECTORS.length } });
+let activePack = RULE_PACKS[0];
+engine.load(activePack.rulebook);
+
+// Sitzungszustand: Eingaben des aktuellen Vorgangs. Vorschläge des Parsers
+// und bestätigte Fakten bleiben strikt getrennt.
+const session = {
+    caseSeq: 1,
+    caseId: 'CASE-0001',
+    requestType: activePack.rulebook.requestTypes[0].id,
+    facts: {},
+    suggestions: {},
+    inputs: {},
+    attachmentData: '',
+    lastDecisionKey: null,
+    execution: null
+};
+
+const currentInput = () => ({ caseId: session.caseId, requestType: session.requestType, facts: Object.assign({}, session.facts) });
+
+// --- Eingabefelder der Aktion: Welche Felder es gibt, bestimmt das Outcome im Rulebook ---
+function actionDefinition() {
+    return activePack.rulebook.metadata.actions.find(a => a.id === activePack.action.id) || {};
+}
+
+function inputMeta(field) {
+    const inputs = actionDefinition().inputs || {};
+    return inputs[field] || {};
+}
+
+// Pflichtfelder liefert die Engine. Optionale Felder stehen nur im Rulebook; die Engine erzwingt sie nicht.
+function inputFieldsFor(ev) {
+    if (!ev || !ev.outcome) return [];
+    const fields = ev.outcome.requiredInputs.map(r => ({ field: r.field, label: r.label, required: true }));
+    const raw = activePack.rulebook.outcomes.find(o => o.id === ev.outcome.id) || {};
+    (raw.optionalInputs || []).forEach(o => {
+        const applies = !o.when || UniversalRulesEngine.matches(o.when, ev.input.facts);
+        if (applies && !fields.some(f => f.field === o.field)) fields.push({ field: o.field, label: o.label, required: false });
+    });
+    return fields;
+}
+
+// Sichtbare Vorbelegungen aus dem Rulebook gelten, bis der Nutzer das Feld ändert.
+const inputValue = field => (field in session.inputs ? session.inputs[field] : (inputMeta(field).defaultValue || ''));
+
+function collectPayload(ev, issueDate) {
+    const payload = {
+        name: $('q-name').value.trim(),
+        company: $('company-name').value.trim() || 'Verantwortliche Stelle',
+        issueDate: issueDate || formatDateDE(new Date()),
+        attachment: session.attachmentData
+    };
+    inputFieldsFor(ev).forEach(f => { payload[f.field] = inputValue(f.field).trim(); });
+    return payload;
+}
+
+// --- Smart Ingestion (der Parser des Packs liefert nur Vorschläge) ---
+function runIngestion() {
+    const text = $('ingest-text').value;
+    if (!text.trim()) { $('ingest-hint').classList.remove('hidden'); return; }
+    $('ingest-hint').classList.add('hidden');
+
+    const result = activePack.parse(text);
+
+    // Strikt als Vorschläge gespeichert, NICHT als bestätigte Fakten.
+    session.requestType = result.requestType;
+    session.facts = {};
+    session.suggestions = result.suggestions;
+    session.lastDecisionKey = null;
+
+    $('q-name').value = result.subject;
+    $('q-type').value = result.requestType;
+
+    const box = $('parser-reasoning');
+    box.textContent = '';
+    box.appendChild(el('strong', 'Parser-Begründung:'));
+    const ul = el('ul');
+    result.reasoning.forEach(r => ul.appendChild(el('li', r)));
+    box.appendChild(ul);
+    box.classList.remove('hidden');
+
+    engine.log('SMART_INGESTION', {
+        caseId: session.caseId, rulePack: activePack.rulebook.metadata.id, length: text.length,
+        detectedType: result.requestType, nameFound: !!result.subject,
+        suggestedFacts: Object.keys(result.suggestions).sort(), reasoning: result.reasoning
+    });
+
+    refreshWorkflow();
+    $('step-1-ingestion').classList.add('hidden');
+    $('step-2-questionnaire').classList.remove('hidden');
+}
+
+// --- Fragebogen: rendert ausschließlich, was die Engine als aktiv meldet ---
+function renderQuestionnaire(ev, focusFact) {
+    const container = $('dynamic-questions-container');
+    container.textContent = '';
+    const labels = activePack.rulebook.metadata.answerLabels || {};
+
+    ev.trace.forEach(t => {
+        const rule = engine.getRule(t.ruleId);
+        const answered = t.state === 'ANSWERED';
+        const group = el('div', null, 'form-group');
+        // STRICT GATE: keine Default-Antworten. Offene Regeln werden markiert.
+        if (!answered) group.classList.add('unanswered-highlight');
+
+        group.appendChild(el('span', rule.id, 'rule-id'));
+        const lbl = el('label', rule.question);
+        lbl.id = 'lbl_' + rule.fact;
+        group.appendChild(lbl);
+
+        const suggestion = session.suggestions[rule.fact];
+        if (!answered && suggestion !== undefined) {
+            const badge = el('span', `Vorschlag aus ${activePack.text.suggestionSource}: ${labels[suggestion] || suggestion} – Bitte durch Klick bestätigen`, 'badge badge-yellow');
+            badge.style.display = 'block';
+            badge.style.marginBottom = '12px';
+            group.appendChild(badge);
+        }
+
+        const rg = el('div', null, 'radio-group row');
+        rg.setAttribute('role', 'radiogroup');
+        rg.setAttribute('aria-labelledby', lbl.id);
+        rule.answers.forEach(val => {
+            const rl = el('label', null, 'radio-label');
+            const inp = el('input');
+            inp.type = 'radio';
+            inp.name = 'q_' + rule.fact;
+            inp.value = val;
+            if (answered && t.answer === val) inp.checked = true;
+            inp.addEventListener('change', () => confirmFact(rule, val));
+            rl.appendChild(inp);
+            rl.appendChild(document.createTextNode(labels[val] || val));
+            rg.appendChild(rl);
+        });
+        group.appendChild(rg);
+
+        const whyBox = el('div', null, 'why-box');
+        whyBox.appendChild(el('h4', 'Juristischer Hintergrund · ' + rule.provenance.source));
+        if (rule.provenance.note) whyBox.appendChild(el('p', rule.provenance.note));
+        if (rule.provenance.quote) whyBox.appendChild(el('p', 'Normtext (Auszug): „' + rule.provenance.quote + '“', 'quote'));
+        const math = rule.answers.map(a => `'${labels[a] || a}' = ${rule.risk[a].toFixed(2)}`).join(', ');
+        whyBox.appendChild(el('p', 'Mathematische Auswirkung: Faktor bei ' + math + '.', 'quote'));
+        group.appendChild(whyBox);
+
+        container.appendChild(group);
+    });
+
+    if (focusFact) {
+        const checked = container.querySelector('input[name="q_' + focusFact + '"]:checked');
+        if (checked) checked.focus();
+    }
+}
+
+function confirmFact(rule, value) {
+    session.facts[rule.fact] = value;
+    const suggestion = session.suggestions[rule.fact];
+    engine.log('USER_CONFIRMED_ANSWER', {
+        caseId: session.caseId,
+        ruleId: rule.id,
+        questionId: rule.fact,
+        answer: value,
+        wasParserSuggested: suggestion !== undefined,
+        matchesSuggestion: suggestion !== undefined ? suggestion === value : null
+    });
+    const ev = refreshWorkflow(rule.fact);
+    logDecisionIfChanged(ev);
+}
+
+function logDecisionIfChanged(ev) {
+    if (!ev.complete) { session.lastDecisionKey = null; return; }
+    if (session.lastDecisionKey === ev.inputHash) return;
+    session.lastDecisionKey = ev.inputHash;
+    engine.log('POLICY_DECISION', {
+        caseId: session.caseId, requestType: ev.input.requestType,
+        decision: ev.decision, status: ev.status, score: ev.score,
+        outcome: ev.outcome ? ev.outcome.id : null,
+        verdict: ev.outcome ? ev.outcome.verdict : null,
+        legalBasis: ev.outcome ? ev.outcome.legalBasis : [],
+        rules: ev.trace.map(t => t.ruleId),
+        rulebookHash: ev.rulebook.hash, inputHash: ev.inputHash
+    });
+}
+
+const DECISION_CHIP = { PERMITTED: 'chip chip-permitted', MANUAL_REVIEW: 'chip chip-review', BLOCKED: 'chip chip-blocked' };
+const statusChipClass = s => (s === 'COMPLIANT' || s === 'REVIEW_COMPLETED') ? 'chip chip-permitted' : (s === 'REVIEW_REQUIRED' ? 'chip chip-review' : (s === 'NON_COMPLIANT' ? 'chip chip-blocked' : 'chip'));
+const isReleased = ev => ev.status === 'COMPLIANT' || ev.status === 'REVIEW_COMPLETED';
+
+function renderDecision(ev) {
+    // Ampel & Score
+    const tl = $('traffic-light');
+    tl.className = 'traffic-light';
+    if (!ev.complete) {
+        tl.classList.add('yellow');
+        $('score-value').textContent = '-.--';
+        $('pending-badge').classList.remove('hidden');
+    } else {
+        $('pending-badge').classList.add('hidden');
+        $('score-value').textContent = ev.score.toFixed(2);
+        tl.classList.add(ev.riskLevel === 'GREEN' ? 'green' : (ev.riskLevel === 'YELLOW' ? 'yellow' : 'red'));
+    }
+
+    // Maschinenlesbare Entscheidung
+    const dc = $('decision-chip');
+    dc.textContent = ev.decision;
+    dc.className = DECISION_CHIP[ev.decision] || 'chip';
+    const sc = $('status-chip');
+    sc.textContent = ev.status;
+    sc.className = statusChipClass(ev.status);
+    $('outcome-label').textContent = ev.outcome ? ev.outcome.label : '–';
+    $('outcome-basis').textContent = ev.outcome ? ev.outcome.legalBasis.join(', ') : '–';
+
+    const reasons = $('decision-reasons');
+    reasons.textContent = '';
+    ev.reasons.forEach(r => reasons.appendChild(el('li', r.message)));
+
+    const obligations = ev.outcome && ev.outcome.effect === 'ALLOW' ? ev.outcome.obligations : [];
+    $('obligations-list').textContent = '';
+    obligations.forEach(o => $('obligations-list').appendChild(el('li', o.text)));
+    $('obligations-box').classList.toggle('hidden', obligations.length === 0);
+
+    // Review / Block
+    $('review-box').classList.toggle('hidden', ev.status !== 'REVIEW_REQUIRED');
+    const done = $('review-done');
+    done.classList.toggle('hidden', ev.status !== 'REVIEW_COMPLETED');
+    if (ev.status === 'REVIEW_COMPLETED') {
+        done.textContent = `Manuelle Prüfung abgeschlossen durch ${ev.review.reviewer}. Die Freigabe gilt nur für diese Faktenlage; jede Änderung einer Antwort hebt sie auf.`;
+    }
+    const blocked = $('blocked-box');
+    const isBlocked = ev.complete && ev.decision === 'BLOCKED';
+    blocked.classList.toggle('hidden', !isBlocked);
+    if (isBlocked) blocked.textContent = 'Aktion blockiert: ' + ev.reasons.map(r => r.message).join(' ');
+
+    // STRICT GATE: Weiter erst, wenn alle aktiven Regeln bestätigt sind UND die Engine freigibt.
+    $('btn-to-step-3').disabled = !isReleased(ev);
+    const hint = $('gate-hint');
+    if (!ev.complete) hint.textContent = 'Weiter ist gesperrt, bis alle aktiven Fragen durch Klick bestätigt sind.';
+    else if (ev.status === 'REVIEW_REQUIRED') hint.textContent = 'Weiter ist gesperrt, bis die manuelle Prüfung abgezeichnet ist.';
+    else if (ev.status === 'NON_COMPLIANT') hint.textContent = 'Weiter ist gesperrt: Die Engine hat die Aktion blockiert.';
+    else hint.textContent = 'Freigegeben durch die Engine (Status ' + ev.status + ').';
+}
+
+// STRICT GATE: Fakten, deren Regel nicht mehr aktiv ist, werden hart gelöscht.
+// Wird die übergeordnete Antwort später zurückgeändert, müssen die abhängigen
+// Fragen erneut aktiv bestätigt werden. evaluate() selbst bleibt seiteneffektfrei.
+function pruneFacts(ev) {
+    const removed = Object.keys(session.facts).filter(f => !(f in ev.input.facts)).sort();
+    if (!removed.length) return false;
+    removed.forEach(f => { delete session.facts[f]; });
+    engine.log('FACTS_PRUNED', { caseId: session.caseId, removed: removed, reason: 'Regel nicht mehr aktiv; erneute Bestätigung erforderlich.' });
+    return true;
+}
+
+function refreshWorkflow(focusFact) {
+    let ev = engine.evaluate(currentInput());
+    if (pruneFacts(ev)) ev = engine.evaluate(currentInput());
+    renderQuestionnaire(ev, focusFact);
+    renderDecision(ev);
+    refreshDevView();
+    return ev;
+}
+
+function completeReview() {
+    const reviewer = $('reviewer-name').value.trim();
+    $('reviewer-hint').classList.toggle('hidden', !!reviewer);
+    if (!reviewer) { $('reviewer-name').focus(); return; }
+    engine.recordReview(currentInput(), reviewer);
+    refreshWorkflow();
+}
+
+// --- Schritt 3: Eingaben, die das Outcome für die Aktion verlangt ---
+function renderActionInputs(ev) {
+    const container = $('action-inputs');
+    container.textContent = '';
+    inputFieldsFor(ev).forEach(f => {
+        const meta = inputMeta(f.field);
+        const group = el('div', null, 'form-group');
+        const label = el('label', f.required ? f.label : f.label + ' (optional)');
+        label.setAttribute('for', 'in-' + f.field);
+        const area = el('textarea');
+        area.id = 'in-' + f.field;
+        area.value = inputValue(f.field);
+        if (meta.placeholder) area.placeholder = meta.placeholder;
+        if (f.required) area.setAttribute('aria-required', 'true');
+        area.addEventListener('input', () => {
+            session.inputs[f.field] = area.value;
+            area.classList.remove('field-missing');
+        });
+        group.appendChild(label);
+        group.appendChild(area);
+        if (meta.hint) group.appendChild(el('p', meta.hint, 'field-hint'));
+        container.appendChild(group);
+    });
+}
+
+function configureStep3(ev) {
+    const fields = inputFieldsFor(ev);
+    const required = fields.filter(f => f.required);
+    const presets = activePack.presets;
+    const presetKeys = presets ? Object.keys(presets.values[presets.options[0].id]) : [];
+    $('preset-box').classList.toggle('hidden', !fields.some(f => presetKeys.indexOf(f.field) !== -1));
+    $('datadrop-section').classList.toggle('hidden', !ev.outcome.acceptsAttachment);
+    renderActionInputs(ev);
+    clearActionError();
+
+    const summary = $('action-summary');
+    summary.textContent = '';
+    summary.appendChild(el('strong', 'Freigegebene Aktion: ' + ev.outcome.label));
+    summary.appendChild(el('p', `Engine-Entscheidung ${ev.decision}, Status ${ev.status}, Score ${ev.score.toFixed(2)}. Rechtsgrundlage: ${ev.outcome.legalBasis.join(', ')}.`, 'mt-4'));
+    if (required.length) summary.appendChild(el('p', 'Das Outcome verlangt Pflichtangaben. Die Aktion wird erst ausgeführt, wenn alle ausgefüllt sind.'));
+}
+
+function clearActionError() {
+    $('action-error').classList.add('hidden');
+    document.querySelectorAll('#action-inputs .field-missing').forEach(e => e.classList.remove('field-missing'));
+}
+
+function goToStep3() {
+    const ev = engine.evaluate(currentInput());
+    // Defense in Depth: Der Button ist deaktiviert, die Engine entscheidet trotzdem erneut.
+    if (!isReleased(ev)) { renderDecision(ev); return; }
+    configureStep3(ev);
+    $('step-2-questionnaire').classList.add('hidden');
+    $('step-3-data').classList.remove('hidden');
+}
+
+function loadPreset() {
+    const val = $('preset-selector').value;
+    if (!val || !activePack.presets) return;
+    const data = activePack.presets.values[val];
+    Object.keys(data).forEach(field => { session.inputs[field] = data[field]; });
+    renderActionInputs(engine.evaluate(currentInput()));
+    clearActionError();
+    engine.log('LOAD_PRESET', { caseId: session.caseId, preset: val });
+    refreshDevView();
+}
+
+// --- Local Data-Drop ---
+function handleFileDrop(e) {
+    e.preventDefault();
+    $('drop-zone').classList.remove('dragover');
+    const file = e.dataTransfer ? e.dataTransfer.files[0] : e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const formatted = formatAttachment(file.name, String(event.target.result));
+        $('data-attachment').value = formatted;
+        $('parsed-data-preview').classList.remove('hidden');
+        session.attachmentData = formatted;
+        engine.log('FILE_PARSED', { caseId: session.caseId, filename: file.name, size: file.size, contentHash: sha256Hex(formatted) });
+    };
+    reader.readAsText(file, 'UTF-8');
+    // Zurücksetzen, damit dieselbe Datei erneut gewählt werden kann (sonst feuert "change" nicht).
+    $('file-input').value = '';
+}
+
+// --- Schritt 4: Aktion ausführen (Enforcement) ---
+function runAction() {
+    const before = engine.evaluate(currentInput());
+    // Idempotenz-Sperre: Für dieselbe Faktenlage wird die Aktion nur einmal ausgeführt.
+    if (session.execution && session.execution.inputHash === before.inputHash) return;
+    clearActionError();
+    const payload = collectPayload(before);
+    const result = activePack.action.execute(engine, currentInput(), payload);
+
+    if (!result.executed) {
+        const box = $('action-error');
+        box.textContent = 'Aktion nicht ausgeführt (' + result.authorization.code + '): ' + result.authorization.message;
+        box.classList.remove('hidden');
+        (result.authorization.missingInputs || []).forEach(f => { const field = $('in-' + f); if (field) field.classList.add('field-missing'); });
+        refreshDevView();
+        return;
+    }
+
+    const ev = result.evaluation;
+    session.execution = {
+        inputHash: ev.inputHash, documentTextHash: result.documentTextHash, issueDate: payload.issueDate,
+        status: ev.status, decision: ev.decision, outcomeId: ev.outcome.id, verdict: ev.outcome.verdict,
+        legalBasis: ev.outcome.legalBasis, reviewer: ev.review.reviewer, score: ev.score
+    };
+
+    $('final-letter').textContent = result.doc;
+    const rec = $('enforcement-record');
+    rec.textContent = '';
+    rec.appendChild(el('strong', 'Aktion ausgeführt: ' + ev.outcome.label));
+    rec.appendChild(el('p', `Freigabe durch die Engine mit Status ${ev.status}` + (ev.review.reviewer ? ` (geprüft durch ${ev.review.reviewer})` : '') + `. Angewandte Normen: ${ev.outcome.legalBasis.join(', ')}.`, 'mt-4'));
+    rec.appendChild(el('p', 'Document-Text-Hash: ' + result.documentTextHash));
+    if (ev.outcome.obligations.length) {
+        rec.appendChild(el('p', 'Vor dem Versand zu erledigen: ' + ev.outcome.obligations.map(o => o.text).join(' ')));
+    }
+    if (ev.outcome.acceptsAttachment && !payload.attachment && activePack.text.attachmentWarning) {
+        rec.appendChild(el('p', activePack.text.attachmentWarning));
+    }
+
+    $('step-3-data').classList.add('hidden');
+    $('step-4-generation').classList.remove('hidden');
+    refreshDevView();
+}
+
+function startNewCase(reason) {
+    session.caseSeq += 1;
+    session.caseId = 'CASE-' + String(session.caseSeq).padStart(4, '0');
+    session.requestType = activePack.rulebook.requestTypes[0].id;
+    session.facts = {};
+    session.suggestions = {};
+    session.inputs = {};
+    session.attachmentData = '';
+    session.lastDecisionKey = null;
+    session.execution = null;
+
+    ['ingest-text', 'q-name', 'reviewer-name', 'data-attachment', 'file-input', 'preset-selector'].forEach(id => { $(id).value = ''; });
+    $('q-type').value = session.requestType;
+    $('action-inputs').textContent = '';
+    $('parsed-data-preview').classList.add('hidden');
+    $('parser-reasoning').classList.add('hidden');
+    $('reviewer-hint').classList.add('hidden');
+    $('ingest-hint').classList.add('hidden');
+    $('final-letter').textContent = '';
+    clearActionError();
+
+    ['step-2-questionnaire', 'step-3-data', 'step-4-generation'].forEach(id => $(id).classList.add('hidden'));
+    $('step-1-ingestion').classList.remove('hidden');
+    engine.log('SESSION_RESET', { reason: reason, newCaseId: session.caseId });
+    refreshWorkflow();
+}
+
+// --- Rule Pack wechseln: dieselbe Engine lädt ein anderes Rulebook ---
+function selectPack(id) {
+    const next = RULE_PACKS.find(p => p.rulebook.metadata.id === id);
+    if (!next || next === activePack) return;
+    activePack = next;
+    engine.load(next.rulebook);
+    renderPackInfo();
+    startNewCase('RULE_PACK_CHANGED');
+}
+
+// --- BGB-Fristenrechner (UI) ---
+function calculateDeadline() {
+    const dateStr = $('dl-date').value;
+    const stateCode = $('dl-state').value;
+    const isExt = document.querySelector('input[name="dl-ext"]:checked').value === 'yes';
+    const receiptDate = parseLocalDate(dateStr);
+    $('dl-hint').classList.toggle('hidden', !!receiptDate);
+    $('dl-date').classList.toggle('field-missing', !receiptDate);
+    if (!receiptDate) {
+        // Kein veraltetes Ergebnis stehen lassen.
+        $('dl-result-panel').classList.add('hidden');
+        $('dl-date').focus();
+        return;
+    }
+
+    const result = computeDeadline(receiptDate, stateCode, isExt);
+    $('dl-caveat').textContent = DEADLINE_CAVEAT + '.';
+    $('dl-history-note').classList.toggle('hidden', receiptDate >= GDPR_APPLICABLE_FROM);
+    const logUl = $('dl-log');
+    logUl.textContent = '';
+    result.steps.forEach(s => logUl.appendChild(el('li', s)));
+    $('dl-final-date').textContent = `${WEEKDAYS[result.endDate.getDay()]}, ${formatDateDE(result.endDate)}`;
+    $('dl-result-panel').classList.remove('hidden');
+    engine.log('CALCULATE_DEADLINE', { receipt: dateStr, state: stateCode, extended: isExt, result: toISODateLocal(result.endDate), shifted: result.shifted, basis: DEADLINE_CAVEAT });
+}
+
+// --- Audit UI & Export ---
+function updateAuditUI() {
+    const tbody = document.querySelector('#event-log-table tbody');
+    if (!tbody) return;
+    tbody.textContent = '';
+    engine.eventLog.forEach(e => {
+        const tr = el('tr');
+        tr.appendChild(el('td', e.seq));
+        tr.appendChild(el('td', e.action));
+        tr.appendChild(el('td', JSON.stringify(e.details)));
+        tr.appendChild(el('td', e.hash.substring(0, 16) + '...'));
+        tbody.appendChild(tr);
+    });
+}
+
+function setProvStatus(text, ok) {
+    const status = $('prov-status');
+    status.textContent = text;
+    status.style.color = ok ? "var(--color-success)" : "var(--color-danger)";
+    status.style.borderColor = ok ? "var(--color-success)" : "var(--color-danger)";
+}
+
+function validateChain() {
+    const res = engine.verifyChain();
+    setProvStatus(res.valid
+        ? `Validierung erfolgreich. ${engine.eventLog.length} Ereignisse. Chain-Hash: ${engine.chainHash}`
+        : `Inkonsistenz erkannt! Die Hash-Kette ist bei Seq ${res.brokenAt} gebrochen: Ein Eintrag wurde nachträglich verändert.`, res.valid);
+}
+
+function testDeterminism() {
+    // Echter Determinismus-Test: Engine und (falls freigegeben) Action je zweimal mit identischen Eingaben.
+    const input = currentInput();
+    const e1 = engine.evaluate(input);
+    const e2 = engine.evaluate(input);
+    const h1 = sha256Hex(canonicalJson(e1));
+    const h2 = sha256Hex(canonicalJson(e2));
+    let ok = h1 === h2;
+    let msg = `Engine: zwei unabhängige Auswertungen, Evaluation-Hash ${h1.substring(0, 16)}...`;
+
+    const payload = collectPayload(e1, session.execution ? session.execution.issueDate : null);
+    if (engine.authorize(activePack.action.id, e1, payload).authorized) {
+        const d1 = activePack.action.render(e1, payload);
+        const d2 = activePack.action.render(e2, payload);
+        const dh1 = sha256Hex(d1);
+        ok = ok && d1 === d2 && dh1 === sha256Hex(d2);
+        msg += ` Action: zwei Durchläufe erzeugen identische Dokumente, Hash ${dh1.substring(0, 16)}...`;
+    } else {
+        msg += ' Action: nicht freigegeben, daher nicht ausgeführt.';
+    }
+    setProvStatus(ok ? 'Determinismus bestätigt. ' + msg : 'Determinismus-Fehler! Durchläufe weichen ab.', ok);
+}
+
+function buildAuditStatement() {
+    const x = session.execution || {};
+    const md = activePack.rulebook.metadata;
+    let doc = `INTERNE AUDITERKLÄRUNG\nDatum: ${new Date().toISOString()}\nVorgang: ${session.caseId}\n\n`;
+    doc += `Engine: ${engine.name} ${ENGINE_VERSION}\nRulebook: ${md.id}@${md.version}\nRulebook-Hash: ${engine.rulebookHash}\n\n`;
+    doc += `Engine-Entscheidung: ${x.decision || '-'}\nStatus bei Ausführung: ${x.status || '-'}\nCompliance Score: ${typeof x.score === 'number' ? x.score.toFixed(2) : '-'}\n`;
+    doc += `Outcome: ${x.outcomeId || '-'} (${x.verdict || '-'})\nAngewandte Normen: ${(x.legalBasis || []).join(', ') || '-'}\nManuelle Prüfung durch: ${x.reviewer || 'nicht erforderlich'}\n\n`;
+    doc += `Input-Hash: ${x.inputHash || '-'}\nDocument-Text-Hash: ${x.documentTextHash || '-'}\nChain-Hash: ${engine.chainHash}\n\n`;
+    doc += `Der Vorgang wurde deterministisch über die Engine ${ENGINE_VERSION} verarbeitet. Die Aktion wurde erst nach Freigabe durch die Engine ausgeführt.\n`;
+    return doc;
+}
+
+// --- Entwickler-Ansicht: Evaluation State & MCP-Mockup ---
+function buildEvaluationState() {
+    const ev = engine.evaluate(currentInput());
+    const auth = engine.authorize(activePack.action.id, ev, collectPayload(ev));
+    const executed = !!(session.execution && session.execution.inputHash === ev.inputHash);
+    // Ein Vorschlag gilt nur so lange als unbestätigt, wie der Fakt nicht bestätigt wurde.
+    const unconfirmed = {};
+    Object.keys(session.suggestions).forEach(k => { if (!(k in session.facts)) unconfirmed[k] = session.suggestions[k]; });
+    return {
+        schema: 'uri.evaluation-state/v1',
+        evaluation: ev,
+        unconfirmedSuggestions: unconfirmed,
+        enforcement: {
+            action: activePack.action.id,
+            authorized: auth.authorized,
+            code: auth.code,
+            message: auth.message,
+            missingInputs: auth.missingInputs || [],
+            executed: executed,
+            documentTextHash: executed ? session.execution.documentTextHash : null
+        },
+        provenance: { chainHash: engine.chainHash, events: engine.eventLog.length }
+    };
+}
+
+function mcpTools() {
+    const rb = activePack.rulebook;
+    const answers = [];
+    rb.rules.forEach(r => r.answers.forEach(a => { if (answers.indexOf(a) === -1) answers.push(a); }));
+    return [
+        {
+            name: 'rules_evaluate',
+            description: 'Wertet bestätigte Fakten gegen ein Rulebook aus. Liefert Entscheidung (PERMITTED | BLOCKED | MANUAL_REVIEW), Status, Score, Outcome und Provenance.',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    rulebook: { type: 'string', enum: RULE_PACKS.map(p => p.rulebook.metadata.id), description: 'Rulebook-ID' },
+                    caseId: { type: 'string' },
+                    requestType: { type: 'string', enum: rb.requestTypes.map(t => t.id) },
+                    facts: { type: 'object', additionalProperties: { type: 'string', enum: answers } }
+                },
+                required: ['rulebook', 'requestType', 'facts']
+            }
+        },
+        {
+            name: 'rules_authorize_action',
+            description: 'Prüft nach dem Default-Deny-Prinzip, ob eine Aktion für die angegebene Faktenlage freigegeben ist.',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    rulebook: { type: 'string' },
+                    action: { type: 'string', enum: rb.metadata.actions.map(a => a.id) },
+                    caseId: { type: 'string' },
+                    requestType: { type: 'string' },
+                    facts: { type: 'object' },
+                    providedInputs: { type: 'array', items: { type: 'string' }, description: 'Namen der bereits ausgefüllten Pflichtangaben' }
+                },
+                required: ['rulebook', 'action', 'requestType', 'facts']
+            }
+        },
+        {
+            name: 'rules_get_rulebook',
+            description: 'Liefert Metadaten, Regeln und Outcomes des geladenen Rulebooks einschließlich Hash.',
+            inputSchema: { type: 'object', properties: { rulebook: { type: 'string' } }, required: ['rulebook'] }
+        }
+    ];
+}
+
+function buildMcpExchange(view) {
+    const rb = activePack.rulebook;
+    const rulebookId = rb.metadata.id;
+    const actionId = activePack.action.id;
+    const input = currentInput();
+    const ev = engine.evaluate(input);
+    const wrap = (structured, isError) => ({
+        jsonrpc: '2.0', id: 1,
+        result: { content: [{ type: 'text', text: JSON.stringify(structured) }], structuredContent: structured, isError: !!isError }
+    });
+    const call = (name, args) => ({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: name, arguments: args } });
+
+    if (view === 'tools/list') {
+        return { request: { jsonrpc: '2.0', id: 1, method: 'tools/list' }, response: { jsonrpc: '2.0', id: 1, result: { tools: mcpTools() } } };
+    }
+    if (view === 'rules_get_rulebook') {
+        return {
+            request: call(view, { rulebook: rulebookId }),
+            response: wrap({ hash: engine.rulebookHash, metadata: rb.metadata, requestTypes: rb.requestTypes, rules: rb.rules, outcomes: rb.outcomes })
+        };
+    }
+    if (view === 'rules_authorize_action') {
+        const payload = collectPayload(ev);
+        const provided = inputFieldsFor(ev).map(f => f.field).filter(f => payload[f] !== '');
+        const auth = engine.authorize(actionId, ev, payload);
+        return {
+            request: call(view, { rulebook: rulebookId, action: actionId, caseId: input.caseId, requestType: input.requestType, facts: input.facts, providedInputs: provided }),
+            response: wrap(Object.assign({ decision: ev.decision, status: ev.status }, auth))
+        };
+    }
+    return {
+        request: call('rules_evaluate', { rulebook: rulebookId, caseId: input.caseId, requestType: input.requestType, facts: input.facts }),
+        response: wrap(ev)
+    };
+}
+
+function refreshDevView() {
+    const pre = $('dev-state');
+    if (!pre) return;
+    const state = buildEvaluationState();
+    pre.textContent = JSON.stringify(state, null, 2);
+
+    const dc = $('dev-decision-chip');
+    dc.textContent = state.evaluation.decision;
+    dc.className = DECISION_CHIP[state.evaluation.decision] || 'chip';
+    const sc = $('dev-status-chip');
+    sc.textContent = state.evaluation.status;
+    sc.className = statusChipClass(state.evaluation.status);
+    const ac = $('dev-action-chip');
+    ac.textContent = state.enforcement.authorized ? 'action: authorized' : 'action: not authorized';
+    ac.className = state.enforcement.authorized ? 'chip chip-permitted' : 'chip';
+
+    const exchange = buildMcpExchange($('mcp-view').value);
+    $('mcp-request').textContent = JSON.stringify(exchange.request, null, 2);
+    $('mcp-response').textContent = JSON.stringify(exchange.response, null, 2);
+}
+
+// --- Alles, was vom aktiven Rule Pack abhängt ---
+function renderPackInfo() {
+    const rb = activePack.rulebook;
+    const md = rb.metadata;
+    const text = activePack.text;
+
+    // Header & Footer
+    const meta = $('header-meta');
+    meta.textContent = '';
+    [`Rule Pack: ${md.id}@${md.version}`, `Rulebook-Hash: ${engine.rulebookHash.substring(0, 12)}…`, `Engine ${ENGINE_VERSION}`, `SHA-256 Self-Test: bestanden (${SHA256_TEST_VECTORS.length} Vektoren)`]
+        .forEach(t => meta.appendChild(el('span', t, 'badge badge-neutral')));
+    $('footer-version').textContent = `DSAR Regel-Engine v${APP_VERSION} | Universal Rules Engine ${ENGINE_VERSION}: Deterministisch (Strict-Gate, Default-Deny) | Rule Pack ${md.id}@${md.version} | Lizenz: MIT`;
+
+    // Workflow-Texte
+    $('pack-select').value = md.id;
+    $('pack-description').textContent = md.description;
+    $('ingest-intro').textContent = text.ingestIntro;
+    $('ingest-label').textContent = text.ingestLabel;
+    $('ingest-text').placeholder = text.ingestPlaceholder;
+    $('ingest-hint').textContent = text.ingestMissing;
+    $('subject-label').textContent = text.subjectLabel;
+    $('subject-hint').textContent = text.subjectHint;
+    $('btn-to-step-4').textContent = text.actionButton;
+    $('result-title').textContent = text.resultTitle;
+    $('result-intro').textContent = text.resultIntro;
+    $('btn-export-txt').textContent = text.exportLabel;
+
+    // Anfrage-Typen aus dem Rulebook
+    const typeSelect = $('q-type');
+    typeSelect.textContent = '';
+    engine.getRequestTypes().forEach(t => {
+        const opt = el('option', t.label);
+        opt.value = t.id;
+        typeSelect.appendChild(opt);
+    });
+
+    // Presets des Packs (falls vorhanden)
+    const presetSelect = $('preset-selector');
+    presetSelect.textContent = '';
+    const blank = el('option', '-- Profil wählen --');
+    blank.value = '';
+    presetSelect.appendChild(blank);
+    if (activePack.presets) {
+        $('preset-title').textContent = activePack.presets.title;
+        $('preset-intro').textContent = activePack.presets.intro;
+        activePack.presets.options.forEach(o => {
+            const opt = el('option', o.label);
+            opt.value = o.id;
+            presetSelect.appendChild(opt);
+        });
+    }
+
+    // Rulebook-Übersicht (Entwickler-Tab)
+    const metaBody = document.querySelector('#rulebook-meta-table tbody');
+    metaBody.textContent = '';
+    [
+        ['ID / Version', `${md.id}@${md.version}`],
+        ['Domäne', md.domain],
+        ['Rechtsraum', md.jurisdiction],
+        ['Regeln / Outcomes', `${rb.rules.length} / ${rb.outcomes.length}`],
+        ['Scoring', md.scoring.description],
+        ['Entscheidungslogik', `Default ${md.decisionPolicy.defaultDecision}; MANUAL_REVIEW unter ${md.decisionPolicy.reviewBelow.toFixed(2)}; BLOCKED bei ${md.decisionPolicy.blockAtOrBelow.toFixed(2)} oder DENY-Outcome`],
+        ['Aktionen', md.actions.map(a => `${a.id} (benötigt ${a.requiresStatus.join(' oder ')})`).join('; ')],
+        ['SHA-256', engine.rulebookHash]
+    ].forEach(row => {
+        const tr = el('tr');
+        tr.appendChild(el('th', row[0]));
+        tr.appendChild(el('td', row[1]));
+        metaBody.appendChild(tr);
+    });
+    $('rulebook-json').textContent = JSON.stringify(rb, null, 2);
+}
+
+// --- Inhalte, die für alle Packs gleich sind ---
+function renderStaticContent() {
+    const packSelect = $('pack-select');
+    RULE_PACKS.forEach(p => {
+        const opt = el('option', `${p.rulebook.metadata.name} (${p.rulebook.metadata.id})`);
+        opt.value = p.rulebook.metadata.id;
+        packSelect.appendChild(opt);
+    });
+
+    // Wissensdatenbank
+    const kContainer = $('knowledge-container');
+    knowledgeBase.forEach(k => {
+        const box = el('div', null, 'why-box');
+        box.style.borderRadius = 'var(--radius)';
+        box.style.marginBottom = '16px';
+        box.appendChild(el('h4', k.title));
+        box.appendChild(el('p', `Rechtsgrundlage: ${k.basis}`, 'quote'));
+        box.appendChild(el('p', k.body));
+        kContainer.appendChild(box);
+    });
+
+    // Fallbeispiele
+    const cTbody = document.querySelector('#cases-table tbody');
+    caseDatabase.forEach(c => {
+        const tr = el('tr');
+        tr.appendChild(el('td', c.court));
+        const azTd = el('td', c.az);
+        if (!c.verified) {
+            const badge = el('span', 'Fundstelle ungeprüft', 'badge badge-yellow');
+            badge.style.display = 'block';
+            badge.style.margin = '8px 0 0';
+            badge.style.width = 'fit-content';
+            azTd.appendChild(badge);
+        }
+        tr.appendChild(azTd);
+        tr.appendChild(el('td', c.summary));
+        cTbody.appendChild(tr);
+    });
+}
+
+// --- Initialisierung & Event Listener ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Selbsttest: Jedes ALLOW-Outcome jedes Packs muss auf ein vorhandenes Template zeigen.
+    const missingTemplates = [];
+    RULE_PACKS.forEach(p => p.rulebook.outcomes.forEach(o => {
+        if (o.effect === 'ALLOW' && typeof p.action.templates[o.template] !== 'function') missingTemplates.push(o.id);
+    }));
+    if (missingTemplates.length) engine.log('SELFTEST_FAILED', { missingTemplates: missingTemplates });
+
+    engine.onLog = updateAuditUI;
+    renderStaticContent();
+    renderPackInfo();
+    updateAuditUI();
+
+    // Navigation
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const target = e.currentTarget;
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('main > section').forEach(s => s.classList.remove('active'));
+            target.classList.add('active');
+            $(target.getAttribute('data-target')).classList.add('active');
+            if (target.getAttribute('data-target') === 'view-dev') refreshDevView();
+        });
+    });
+
+    // Workflow
+    $('pack-select').addEventListener('change', (e) => selectPack(e.target.value));
+    $('btn-parse').addEventListener('click', runIngestion);
+    $('q-type').addEventListener('change', (e) => {
+        const previous = session.requestType;
+        session.requestType = e.target.value;
+        session.facts = {};
+        session.suggestions = {};
+        session.lastDecisionKey = null;
+        $('parser-reasoning').classList.add('hidden');
+        engine.log('REQUEST_TYPE_CHANGED', { caseId: session.caseId, from: previous, to: session.requestType, answersReset: true, suggestionsCleared: true });
+        refreshWorkflow();
+    });
+    $('btn-review').addEventListener('click', completeReview);
+    $('btn-to-step-3').addEventListener('click', goToStep3);
+    $('btn-back-to-step-2').addEventListener('click', () => {
+        $('step-3-data').classList.add('hidden');
+        $('step-2-questionnaire').classList.remove('hidden');
+        refreshWorkflow();
+    });
+    $('btn-reset-workflow').addEventListener('click', () => startNewCase('ABORTED'));
+    $('btn-restart').addEventListener('click', () => startNewCase('COMPLETED'));
+    $('preset-selector').addEventListener('change', loadPreset);
+
+    // Drag & Drop
+    const dropZone = $('drop-zone');
+    const fileInput = $('file-input');
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', handleFileDrop);
+    fileInput.addEventListener('click', (e) => e.stopPropagation());
+    fileInput.addEventListener('change', handleFileDrop);
+
+    // Action & Export
+    $('btn-to-step-4').addEventListener('click', runAction);
+    $('btn-export-txt').addEventListener('click', () => downloadFile(activePack.text.exportFile, $('final-letter').textContent));
+    $('btn-export-audit').addEventListener('click', () => downloadFile(`${activePack.text.filePrefix}_Interne_Doku.txt`, buildAuditStatement()));
+
+    // Fristenrechner
+    $('btn-calc-dl').addEventListener('click', calculateDeadline);
+
+    // Audit
+    $('btn-val-chain').addEventListener('click', validateChain);
+    $('btn-test-det').addEventListener('click', testDeterminism);
+    $('btn-export-json').addEventListener('click', () => {
+        const md = activePack.rulebook.metadata;
+        downloadFile(`${activePack.text.filePrefix}_Provenance_Record.json`, JSON.stringify({
+            engine: ENGINE_VERSION,
+            rulebook: { id: md.id, version: md.version, hash: engine.rulebookHash },
+            chainHash: engine.chainHash,
+            documentTextHash: session.execution ? session.execution.documentTextHash : null,
+            evaluationState: buildEvaluationState(),
+            log: engine.eventLog
+        }, null, 2));
+    });
+
+    // Entwickler
+    $('mcp-view').addEventListener('change', refreshDevView);
+    $('btn-dev-copy').addEventListener('click', (e) => copyText($('dev-state').textContent, e.currentTarget));
+    $('btn-dev-export').addEventListener('click', () => downloadFile(`${activePack.text.filePrefix}_Evaluation_State.json`, JSON.stringify(buildEvaluationState(), null, 2)));
+    $('btn-rulebook-export').addEventListener('click', () => {
+        const md = activePack.rulebook.metadata;
+        downloadFile(`${md.id}-${md.version}.rulebook.json`, JSON.stringify(activePack.rulebook, null, 2));
+    });
+
+    refreshWorkflow();
+});
+
+// Konsolen-Schnittstelle für Entwickler (rein lokal).
+window.UniversalRules = {
+    engine: engine,
+    packs: RULE_PACKS,
+    get rulebook() { return activePack.rulebook; },
+    get action() { return activePack.action; },
+    selectPack: selectPack,
+    getState: () => buildEvaluationState()
+};
+    </script>
+</body>
+</html>

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DSAR Regel-Engine – Powered by Universal Rules Infrastructure</title>
+
+    <!-- JSON-LD: WebApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "DSAR Regel-Engine",
+      "alternateName": "Universal Rules Infrastructure – Domain Rule Pack DSGVO",
+      "description": "Deterministische Regel-Engine für DSGVO-Betroffenenanfragen (Art. 15, 17, 12 Abs. 3). Strikte Trennung von Rulebook (Policy), Engine (Entscheidung) und Action (Durchsetzung). 100% Local-First.",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+      "license": "https://opensource.org/licenses/MIT",
+      "featureList": [
+        "Rulebook als reines Datenobjekt (Policy as Data)",
+        "Universal Rules Engine: Permitted / Blocked / Manual Review",
+        "Hybrid-Workflow: Smart Ingestion & Strict-Gate-Prüfung",
+        "BGB-Fristenrechner mit Feiertagslogik",
+        "SHA-256 Audit Trail",
+        "Dokumentengenerierung als freigegebene Action (Art. 15 a-h, Art. 17)",
+        "Maschinenlesbarer Evaluation State (MCP/API-Mockup)"
+      ]
+    }
+    </script>
+
+    <style>
+/*__STYLES__*/
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>DSAR Regel-Engine</h1>
+            <div class="brand-subtitle">Powered by Universal Rules Infrastructure</div>
+            <p class="lead">Deterministische Regel-Engine für DSGVO-Betroffenenanfragen. Regeln entscheiden, Aktionen setzen durch. 100% Offline. Zero Dependencies.</p>
+            <div class="header-meta" id="header-meta"></div>
+        </header>
+
+        <nav aria-label="Hauptnavigation">
+            <button class="nav-btn active" data-target="view-workflow">1. Workflow (Hybrid)</button>
+            <button class="nav-btn" data-target="view-deadline">2. BGB-Fristenrechner</button>
+            <button class="nav-btn" data-target="view-knowledge">3. Wissensdatenbank</button>
+            <button class="nav-btn" data-target="view-cases">4. Fallbeispiele</button>
+            <button class="nav-btn" data-target="view-audit">5. Audit Trail (SHA-256)</button>
+            <button class="nav-btn" data-target="view-dev">6. Entwickler (API / MCP)</button>
+            <button class="nav-btn" data-target="view-architecture">7. Architektur</button>
+        </nav>
+
+        <main>
+            <!-- ==========================================
+                 VIEW: WORKFLOW (HYBRID)
+                 ========================================== -->
+            <section id="view-workflow" class="active">
+
+                <!-- STEP 1: SMART INGESTION -->
+                <div class="card" id="pack-card">
+                    <h3>Rule Pack</h3>
+                    <div class="form-group mb-0">
+                        <label for="pack-select">Regelwerk für diesen Vorgang</label>
+                        <select id="pack-select"></select>
+                        <p id="pack-description" class="field-hint"></p>
+                        <p class="field-hint">Alle Regelwerke laufen auf derselben, unveränderten Engine. Ein Wechsel startet einen neuen Vorgang.</p>
+                    </div>
+                </div>
+
+                <div class="card" id="step-1-ingestion">
+                    <h3>Schritt 1: Smart Ingestion (Parser)</h3>
+                    <p id="ingest-intro"></p>
+                    <label id="ingest-label" for="ingest-text"></label>
+                    <textarea id="ingest-text"></textarea>
+                    <p id="ingest-hint" class="field-hint hidden" style="color: var(--color-danger);"></p>
+                    <div class="btn-group">
+                        <button id="btn-parse" class="btn btn-primary">Text analysieren &amp; Workflow starten</button>
+                    </div>
+                </div>
+
+                <!-- STEP 2: INTERACTIVE QUESTIONNAIRE (POLICY DECISION) -->
+                <div class="card hidden" id="step-2-questionnaire">
+                    <div class="grid-3">
+                        <div>
+                            <h3>Schritt 2: Interaktive Prüfung (Policy Decision)</h3>
+                            <p>Bitte prüfen Sie die rechtlichen Voraussetzungen. <strong style="color: var(--color-warning);">Alle Fragen müssen aktiv bestätigt werden.</strong> Die Fragen stammen aus dem Rulebook; die Engine wertet Ihre Antworten deterministisch aus.</p>
+
+                            <div id="parser-reasoning" class="reasoning-box hidden mb-4"></div>
+
+                            <div class="form-group">
+                                <label id="subject-label" for="q-name"></label>
+                                <input type="text" id="q-name" autocomplete="off">
+                                <p id="subject-hint" class="field-hint"></p>
+                            </div>
+                            <div class="form-group">
+                                <label for="q-type">Anfrage-Typ</label>
+                                <select id="q-type"></select>
+                                <p class="field-hint">Ein Wechsel des Anfrage-Typs setzt alle bestätigten Antworten und alle Parser-Vorschläge zurück (Strict-Gate).</p>
+                            </div>
+
+                            <div id="dynamic-questions-container"></div>
+
+                            <div class="btn-group mt-4">
+                                <button id="btn-to-step-3" class="btn btn-primary" disabled>Weiter zu Daten &amp; Presets</button>
+                                <button id="btn-reset-workflow" class="btn btn-outline">Abbrechen</button>
+                            </div>
+                            <p id="gate-hint" class="field-hint"></p>
+                        </div>
+
+                        <div>
+                            <div style="position: sticky; top: 24px;">
+                                <h3>Live-Risiko-Bewertung</h3>
+                                <div class="score-display">
+                                    <div id="traffic-light" class="traffic-light yellow"></div>
+                                    <div>
+                                        <div class="score-caption">Compliance Score</div>
+                                        <div id="score-value" class="score-value">-.--</div>
+                                    </div>
+                                </div>
+                                <div id="pending-badge" class="badge badge-yellow mb-4">Gelb – Antwort offen (Bestätigung erforderlich)</div>
+
+                                <div class="kv"><span>Engine-Entscheidung</span><span><span id="decision-chip" class="chip chip-blocked">BLOCKED</span></span></div>
+                                <div class="kv"><span>Status</span><span><span id="status-chip" class="chip">INCOMPLETE</span></span></div>
+                                <div class="kv"><span>Geplante Aktion</span><span id="outcome-label">–</span></div>
+                                <div class="kv"><span>Rechtsgrundlage</span><span id="outcome-basis">–</span></div>
+
+                                <div class="panel-title">Begründung der Engine</div>
+                                <ul id="decision-reasons" class="mini-list"></ul>
+
+                                <div id="obligations-box" class="hidden">
+                                    <div class="panel-title">Auflagen (Obligations)</div>
+                                    <ul id="obligations-list" class="mini-list"></ul>
+                                </div>
+
+                                <div id="review-box" class="alert-box alert-warning hidden">
+                                    <strong>Manuelle Prüfung erforderlich (MANUAL_REVIEW)</strong>
+                                    <p class="mt-4">Die Aktion wird erst freigegeben, wenn eine verantwortliche Person diese Entscheidung geprüft und abgezeichnet hat.</p>
+                                    <label for="reviewer-name">Name / Kürzel der prüfenden Person</label>
+                                    <input type="text" id="reviewer-name" autocomplete="off">
+                                    <p id="reviewer-hint" class="field-hint hidden" style="color: var(--color-danger);">Bitte Namen oder Kürzel angeben.</p>
+                                    <button id="btn-review" class="btn btn-primary mt-4">Prüfung abschließen (Sign-off)</button>
+                                </div>
+                                <div id="review-done" class="alert-box alert-success hidden"></div>
+                                <div id="blocked-box" class="alert-box alert-danger hidden"></div>
+
+                                <p class="small muted">Der Score ist das Produkt der Risikofaktoren aller bestätigten Regeln (multiplikatives Modell). Unter 0.80 verlangt die Engine eine manuelle Prüfung, bei 0.00 liegt ein direkter Rechtsverstoß vor und die Aktion wird blockiert.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: ACTION INPUTS (PRESETS & DATA DROP) -->
+                <div class="card hidden" id="step-3-data">
+                    <h3>Schritt 3: Daten &amp; Presets (Eingaben für die Aktion)</h3>
+                    <div id="action-summary" class="alert-box alert-info"></div>
+
+                    <div id="preset-box" class="mb-4 hidden">
+                        <h4 id="preset-title"></h4>
+                        <p id="preset-intro"></p>
+                        <div class="form-group">
+                            <label for="preset-selector">Profil</label>
+                            <select id="preset-selector"></select>
+                        </div>
+                    </div>
+
+                    <div id="action-inputs" class="mb-4"></div>
+
+                    <div id="datadrop-section" class="mb-4">
+                        <h4>Local Data-Drop (Datenkopie Art. 15 Abs. 3)</h4>
+                        <p>Ziehen Sie einen CSV- oder JSON-Export hierher. Der lokale Parser formatiert die Daten als strukturierte Text-Tabelle. Die Datei verlässt Ihren Browser nicht.</p>
+                        <p class="field-hint mb-4">Ohne Datei wird keine Datenkopie angehängt; das Schreiben verweist dann auf eine separate Anlage, die Sie selbst beifügen müssen.</p>
+                        <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="CSV- oder JSON-Datei auswählen">
+                            <p>CSV oder JSON Datei hier ablegen oder klicken zum Auswählen</p>
+                            <input type="file" id="file-input" accept=".csv,.json" style="display: none;">
+                        </div>
+                        <div id="parsed-data-preview" class="hidden mt-4">
+                            <label for="data-attachment">Formatierte Datenkopie (Vorschau)</label>
+                            <textarea id="data-attachment" rows="6" readonly style="background: var(--color-bg); font-family: var(--font-mono); font-size: 0.85rem;"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-4">
+                        <label for="company-name">Name des Verantwortlichen (Ihr Unternehmen)</label>
+                        <input type="text" id="company-name" value="Musterunternehmen GmbH">
+                    </div>
+
+                    <div id="action-error" class="alert-box alert-danger hidden"></div>
+
+                    <div class="btn-group">
+                        <button id="btn-to-step-4" class="btn btn-primary"></button>
+                        <button id="btn-back-to-step-2" class="btn btn-outline">Zurück</button>
+                    </div>
+                </div>
+
+                <!-- STEP 4: ACTION RESULT (EXECUTION / ENFORCEMENT) -->
+                <div class="card hidden" id="step-4-generation">
+                    <h3 id="result-title"></h3>
+                    <p id="result-intro"></p>
+
+                    <div id="enforcement-record" class="alert-box alert-success"></div>
+
+                    <div class="btn-group mb-4">
+                        <button id="btn-export-txt" class="btn btn-primary"></button>
+                        <button id="btn-export-audit" class="btn btn-outline">Interne Auditerklärung (.txt)</button>
+                    </div>
+
+                    <pre id="final-letter"></pre>
+
+                    <div class="btn-group mt-4">
+                        <button id="btn-restart" class="btn btn-outline">Neuen Vorgang starten</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 VIEW: DEADLINE CALCULATOR
+                 ========================================== -->
+            <section id="view-deadline">
+                <div class="card">
+                    <h2>BGB-Fristenrechner</h2>
+                    <p>Berechnung nach § 187 Abs. 1, § 188 Abs. 2 und § 193 BGB inkl. Gaußscher Osterformel für alle 16 Bundesländer. Landesfeiertage werden erst ab dem Jahr ihrer Einführung berücksichtigt.</p>
+                    <div class="alert-box alert-warning">
+                        <strong>Orientierungswert nach BGB / VO 1182/71 (praxisüblich, aber im Detail umstritten).</strong> Ob sich die Monatsfrist des Art. 12 Abs. 3 DSGVO und ihre Verschiebung an Wochenenden und Feiertagen nach dem BGB oder nach der Fristen-Verordnung (EWG, Euratom) Nr. 1182/71 richtet, ist nicht abschließend geklärt. Planen Sie im Zweifel mit dem früheren Datum.
+                    </div>
+
+                    <div class="grid-2">
+                        <div>
+                            <div class="form-group">
+                                <label for="dl-date">Eingangsdatum der Anfrage</label>
+                                <input type="date" id="dl-date" aria-describedby="dl-hint">
+                                <p id="dl-hint" class="field-hint hidden" role="alert" style="color: var(--color-danger);">Bitte wählen Sie ein gültiges Eingangsdatum.</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="dl-state">Bundesland (Sitz des Verantwortlichen)</label>
+                                <select id="dl-state">
+                                    <option value="BW">Baden-Württemberg</option>
+                                    <option value="BY">Bayern</option>
+                                    <option value="BE">Berlin</option>
+                                    <option value="BB">Brandenburg</option>
+                                    <option value="HB">Bremen</option>
+                                    <option value="HH">Hamburg</option>
+                                    <option value="HE">Hessen</option>
+                                    <option value="MV">Mecklenburg-Vorpommern</option>
+                                    <option value="NI">Niedersachsen</option>
+                                    <option value="NW">Nordrhein-Westfalen</option>
+                                    <option value="RP">Rheinland-Pfalz</option>
+                                    <option value="SL">Saarland</option>
+                                    <option value="SN">Sachsen</option>
+                                    <option value="ST">Sachsen-Anhalt</option>
+                                    <option value="SH">Schleswig-Holstein</option>
+                                    <option value="TH">Thüringen</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label id="dl-ext-label">Fristverlängerung (Art. 12 Abs. 3 DSGVO)</label>
+                                <div class="radio-group row" role="radiogroup" aria-labelledby="dl-ext-label">
+                                    <label class="radio-label"><input type="radio" name="dl-ext" value="no" checked> Nein (1 Monat)</label>
+                                    <label class="radio-label"><input type="radio" name="dl-ext" value="yes"> Ja (+2 Monate)</label>
+                                </div>
+                            </div>
+                            <button id="btn-calc-dl" class="btn btn-primary">Frist berechnen</button>
+                        </div>
+
+                        <div id="dl-result-panel" class="hidden" style="background: var(--color-bg); padding: 24px; border-radius: var(--radius); border: 1px solid var(--color-border);">
+                            <h3>Berechnetes Fristende</h3>
+                            <div id="dl-final-date" style="font-size: 1.5rem; font-weight: 600; color: var(--color-success); margin-bottom: 8px;"></div>
+                            <p id="dl-caveat" class="small" style="color: var(--color-warning); font-weight: 600;"></p>
+                            <p id="dl-history-note" class="small muted hidden">Das Eingangsdatum liegt vor dem 25.05.2018 (Geltungsbeginn der DSGVO). Feiertagsregeln vor 2017 sind nicht historisiert.</p>
+                            <h3 style="margin-top: 24px;">Berechnungsprotokoll</h3>
+                            <ul id="dl-log" style="font-size: 0.875rem; color: var(--color-text-muted); padding-left: 20px; margin-bottom: 0;"></ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 VIEW: KNOWLEDGE BASE
+                 ========================================== -->
+            <section id="view-knowledge">
+                <div class="card">
+                    <h2>Wissensdatenbank</h2>
+                    <p>Fundierte juristische Erläuterungen zu den Kernaspekten der DSGVO-Betroffenenrechte.</p>
+                    <div id="knowledge-container"></div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 VIEW: CASES
+                 ========================================== -->
+            <section id="view-cases">
+                <div class="card">
+                    <h2>Fallbeispiel-Datenbank</h2>
+                    <p>Relevante Entscheidungen des EuGH, nationaler Gerichte und der Aufsichtsbehörden. Einträge mit dem Hinweis „Fundstelle ungeprüft“ konnten nicht gegen eine Primärquelle abgeglichen werden und sind vor einer Verwendung zu verifizieren.</p>
+                    <div class="table-wrap">
+                        <table id="cases-table">
+                            <thead>
+                                <tr>
+                                    <th>Gericht / Behörde</th>
+                                    <th>Aktenzeichen</th>
+                                    <th>Sachverhalt &amp; Leitsatz</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 VIEW: AUDIT TRAIL
+                 ========================================== -->
+            <section id="view-audit">
+                <div class="card">
+                    <h2>Execution Provenance &amp; Audit Trail</h2>
+                    <p>Jedes Ereignis der Engine (bestätigte Fakten, Policy-Entscheidungen, Reviews, ausgeführte Aktionen) wird per SHA-256 verkettet. Erkennt nachträgliche Änderungen im Workflow. Das Log dient der internen Rechenschaftspflicht (Art. 5 Abs. 2 DSGVO); eine kryptografische Garantie gegen gezielte Manipulation des lokalen Speichers (z.B. per Dev-Tools) besteht vor dem Export jedoch nicht.</p>
+
+                    <div class="alert-box alert-warning">
+                        <strong>RECHTLICHER HINWEIS ZUR AUDIT-GRENZE:</strong> Die Hash-Kette wird im Arbeitsspeicher des Browsers geführt und endet mit dem Export (.txt / .json). Sie ist nicht signiert und nicht extern verankert; wer Zugriff auf die laufende Seite hat, kann das Log samt Hashes neu berechnen. Sichern Sie den exportierten Record deshalb zeitnah in einem revisionssicheren System. Nachträgliche manuelle Änderungen am exportierten Text außerhalb dieser Anwendung liegen in der alleinigen Verantwortung und Rechenschaftspflicht (Art. 5 Abs. 2 DSGVO) des Bearbeiters.
+                    </div>
+
+                    <div class="btn-group mb-4">
+                        <button id="btn-val-chain" class="btn btn-primary">Hash-Kette validieren</button>
+                        <button id="btn-test-det" class="btn btn-outline">Determinismus-Test ausführen</button>
+                        <button id="btn-export-json" class="btn btn-outline">Record (.json) exportieren</button>
+                    </div>
+
+                    <div id="prov-status" role="status" style="padding: 16px; border-radius: var(--radius); border: 1px solid var(--color-border); margin-bottom: 24px; font-weight: 500; background: var(--color-bg); overflow-wrap: anywhere;">Status: Bereit.</div>
+
+                    <div class="table-wrap">
+                        <table id="event-log-table">
+                            <thead>
+                                <tr>
+                                    <th>Seq</th>
+                                    <th>Aktion</th>
+                                    <th>Details (Verdicts &amp; Paragraphen)</th>
+                                    <th>SHA-256 Hash (Prefix)</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 VIEW: DEVELOPER (API / MCP MOCKUP)
+                 ========================================== -->
+            <section id="view-dev">
+                <div class="card">
+                    <h2>Engine Evaluation State</h2>
+                    <p>Die Engine liefert ihre Entscheidung nicht nur als Ampel, sondern als maschinenlesbares Objekt. Dieser Zustand wird bei jeder bestätigten Antwort neu berechnet und ist die Grundlage für jede Freigabe einer Aktion. Er enthält keine Inhaltsdaten der betroffenen Person (kein Name, kein E-Mail-Text, keine Datenkopie).</p>
+                    <div class="header-meta mb-4">
+                        <span id="dev-decision-chip" class="chip chip-blocked">BLOCKED</span>
+                        <span id="dev-status-chip" class="chip">INCOMPLETE</span>
+                        <span id="dev-action-chip" class="chip">action: not authorized</span>
+                    </div>
+                    <div class="btn-group mb-4" style="margin-top: 0;">
+                        <button id="btn-dev-copy" class="btn btn-outline">JSON kopieren</button>
+                        <button id="btn-dev-export" class="btn btn-outline">Evaluation State (.json) exportieren</button>
+                    </div>
+                    <pre id="dev-state" class="json-view" tabindex="0" aria-label="Engine Evaluation State als JSON"></pre>
+                    <p class="small muted mb-0">Konsole: <code>UniversalRules.getState()</code> liefert dasselbe Objekt, <code>UniversalRules.engine.evaluate({ requestType, facts })</code> wertet beliebige Fakten gegen das geladene Rulebook aus.</p>
+                </div>
+
+                <div class="card">
+                    <h2>MCP / API Mockup</h2>
+                    <div class="alert-box alert-info">
+                        <strong>Mockup, keine Schnittstelle.</strong> Die folgenden Nachrichten werden lokal im Browser aus dem aktuellen Engine-Zustand erzeugt. Es existiert kein Server und es findet keine Netzwerkkommunikation statt. Die Struktur ist an das Model Context Protocol (JSON-RPC 2.0, <code>tools/list</code> und <code>tools/call</code>) angelehnt und zeigt, wie ein KI-Agent die Engine künftig abfragen könnte, bevor er handelt.
+                    </div>
+                    <div class="form-group">
+                        <label for="mcp-view">Simulierte Anfrage</label>
+                        <select id="mcp-view">
+                            <option value="rules_evaluate">tools/call → rules_evaluate (Entscheidung abfragen)</option>
+                            <option value="rules_authorize_action">tools/call → rules_authorize_action (Aktion freigeben lassen)</option>
+                            <option value="rules_get_rulebook">tools/call → rules_get_rulebook (Regelwerk lesen)</option>
+                            <option value="tools/list">tools/list (verfügbare Werkzeuge)</option>
+                        </select>
+                    </div>
+                    <div class="grid-2">
+                        <div>
+                            <h4>Request (Agent → Engine)</h4>
+                            <pre id="mcp-request" class="json-view" tabindex="0" aria-label="Simulierter MCP-Request"></pre>
+                        </div>
+                        <div>
+                            <h4>Response (Engine → Agent)</h4>
+                            <pre id="mcp-response" class="json-view" tabindex="0" aria-label="Simulierte MCP-Response"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Rulebook (Policy as Data)</h2>
+                    <p>Das Regelwerk ist ein reines Datenobjekt ohne ausführbaren Code. Die Engine validiert es beim Laden, friert es ein und bildet einen SHA-256-Hash darüber. Jede Entscheidung verweist auf diesen Hash.</p>
+                    <div class="table-wrap">
+                        <table id="rulebook-meta-table"><tbody></tbody></table>
+                    </div>
+                    <div class="btn-group mb-4" style="margin-top: 0;">
+                        <button id="btn-rulebook-export" class="btn btn-outline">Rulebook (.json) exportieren</button>
+                    </div>
+                    <details>
+                        <summary>Rulebook als JSON anzeigen</summary>
+                        <pre id="rulebook-json" class="json-view" tabindex="0" aria-label="Rulebook als JSON"></pre>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 VIEW: ARCHITECTURE
+                 ========================================== -->
+            <section id="view-architecture">
+                <div class="card">
+                    <h2>Vision: Universal Rules Infrastructure</h2>
+                    <p>Die DSAR Regel-Engine ist die V1 einer <strong>Universal Rules Infrastructure</strong>: einer Schicht, die Regeln strikt von ihrer Durchsetzung trennt. Regeln liegen als versionierte Daten vor, eine generische Engine wertet sie deterministisch aus, und erst ihre Entscheidung gibt eine Aktion frei. Das Prinzip ist an den Open Policy Agent (OPA) angelehnt: Die Policy-Entscheidung ist von der Stelle entkoppelt, die sie durchsetzt.</p>
+                    <p>Fachliches steckt ausschließlich in <strong>Domain Rule Packs</strong>. Die Engine selbst kennt keine DSGVO; sie kennt nur Regeln, Fakten, Risikofaktoren, Outcomes und Aktionen. Ein weiteres Rechtsgebiet ist damit ein weiteres Rulebook, kein neues Programm.</p>
+
+                    <div class="pipeline">
+                        <div class="pipe-step"><span class="pipe-no">01 · INPUT</span><strong>Bestätigte Fakten</strong><p>Parser-Vorschläge werden erst durch Klick zu Fakten (Strict-Gate).</p></div>
+                        <div class="pipe-step"><span class="pipe-no">02 · POLICY</span><strong>Rulebook</strong><p>Regeln, Abhängigkeiten, Quellen und Outcomes als Daten.</p></div>
+                        <div class="pipe-step"><span class="pipe-no">03 · DECISION</span><strong>Rules Engine</strong><p>PERMITTED, MANUAL_REVIEW oder BLOCKED. Default-Deny.</p></div>
+                        <div class="pipe-step"><span class="pipe-no">04 · ENFORCEMENT</span><strong>Action</strong><p>Das Antwortschreiben entsteht nur bei COMPLIANT oder REVIEW_COMPLETED.</p></div>
+                        <div class="pipe-step"><span class="pipe-no">05 · EVIDENCE</span><strong>Audit Trail</strong><p>Jeder Schritt in einer SHA-256-Hash-Kette.</p></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Die fünf Bausteine</h2>
+                    <div class="pillar-grid">
+                        <div class="pillar">
+                            <h4>1. Rulebook</h4>
+                            <p>Policy as Data. Jede Regel trägt ID, fachliche Frage, Risikofaktoren je Antwort, Rechtsquelle und Abhängigkeit (<code>showIf</code>). Eine Entscheidungstabelle (<code>outcomes</code>) ordnet Faktenlagen einer Aktion, Rechtsgrundlagen, Pflichtangaben und Auflagen zu.</p>
+                            <p>In dieser Datei: <code>DSARRulebook</code></p>
+                        </div>
+                        <div class="pillar">
+                            <h4>2. Rules Engine</h4>
+                            <p>Lädt und validiert das Rulebook, prüft den Zustand gegen die Regeln, berechnet den Score und fällt die Entscheidung. Ohne vollständig bestätigte Fakten lautet sie immer BLOCKED.</p>
+                            <p>In dieser Datei: <code>UniversalRulesEngine</code></p>
+                        </div>
+                        <div class="pillar">
+                            <h4>3. Provenance</h4>
+                            <p>Jede Regel verweist auf ihre Norm. Jede Entscheidung nennt die angewandten Regel-IDs, den Rulebook-Hash und einen Input-Hash. So ist nachvollziehbar, welche Regelversion auf welcher Faktenlage zu welchem Ergebnis geführt hat.</p>
+                            <p>In dieser Datei: <code>provenance</code>, <code>trace</code>, <code>inputHash</code></p>
+                        </div>
+                        <div class="pillar">
+                            <h4>4. Verification</h4>
+                            <p>SHA-256 Self-Test beim Start, Schema-Prüfung des Rulebooks beim Laden, Hash-Kette über alle Ereignisse, Determinismus-Test und ein an Faktenlage und Vorgang gebundener Review-Sign-off. Ändert sich ein Fakt, verfällt die Freigabe. Die Kette erkennt nachträgliche Änderungen, ersetzt aber keine externe Signatur.</p>
+                            <p>In dieser Datei: Tab „Audit Trail“</p>
+                        </div>
+                        <div class="pillar">
+                            <h4>5. Interface</h4>
+                            <p>Die Entscheidung liegt als maschinenlesbarer Evaluation State vor. Dieselbe Struktur kann künftig über eine API oder das Model Context Protocol an KI-Agenten ausgeliefert werden.</p>
+                            <p>In dieser Datei: Tab „Entwickler (API / MCP)“</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Einordnung gegenüber OPA</h2>
+                    <p>Die Begriffe sind bewusst gewählt. Es wird weder OPA noch Rego verwendet; übernommen ist das Trennungsprinzip.</p>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Konzept</th><th>Open Policy Agent</th><th>DSAR Regel-Engine</th></tr></thead>
+                            <tbody>
+                                <tr><td>Policy</td><td>Rego-Module</td><td><code>DSARRulebook</code> (JSON-artiges Datenobjekt)</td></tr>
+                                <tr><td>Input</td><td>JSON-Dokument der anfragenden Stelle</td><td>Aktiv bestätigte Fakten (<code>requestType</code>, <code>facts</code>)</td></tr>
+                                <tr><td>Policy Decision Point</td><td>OPA-Engine</td><td><code>UniversalRulesEngine.evaluate()</code></td></tr>
+                                <tr><td>Decision</td><td>Beliebiges JSON-Ergebnis</td><td><code>PERMITTED</code> / <code>MANUAL_REVIEW</code> / <code>BLOCKED</code> plus Status, Score, Outcome</td></tr>
+                                <tr><td>Policy Enforcement Point</td><td>Aufrufender Dienst</td><td>Dokumenten-Action: <code>authorize()</code>, dann <code>execute()</code></td></tr>
+                                <tr><td>Decision Log</td><td>Decision Logs</td><td>SHA-256 Audit Trail</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Künftige Ausbaustufen</h2>
+                    <p class="muted">Ausblick. Nichts davon ist Bestandteil dieser V1.</p>
+                    <ul class="roadmap">
+                        <li><strong>Weitere Domain Rule Packs.</strong> Die übrigen Betroffenenrechte (Art. 16, 18, 20, 21 DSGVO) und angrenzende Regelwerke. Jedes Pack ist ein eigenes, versioniertes Rulebook.</li>
+                        <li><strong>AI Agent Governance.</strong> KI-Agenten fragen die Engine über MCP ab, bevor sie ein Werkzeug aufrufen oder etwas versenden. Die Antwort (Permitted / Blocked / Manual Review) entscheidet, ob der Agent handeln darf, und wird protokolliert.</li>
+                        <li><strong>Cybersecurity Policy Engine.</strong> Zugriffs-, Konfigurations- und Freigaberegeln als Rule Packs, ausgewertet von derselben Engine und mit demselben Audit Trail.</li>
+                        <li><strong>Signierte Rulebooks.</strong> Import externer Rulebooks mit Signaturprüfung, Versionshistorie und Vier-Augen-Freigabe für Regeländerungen.</li>
+                        <li><strong>Server-Interface.</strong> Auslieferung des Evaluation State über eine echte API bzw. einen MCP-Server, ohne den Local-First-Modus aufzugeben.</li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div id="footer-version">DSAR Regel-Engine</div>
+            <div><strong>Hinweis:</strong> Workflow-Assistent, keine Rechtsberatung. 100% Local-First.</div>
+        </footer>
+    </div>
+
+    <script>
+/*__SCRIPT__*/
+    </script>
+</body>
+</html>

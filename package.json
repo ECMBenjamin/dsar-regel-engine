@@ -1,0 +1,19 @@
+{
+  "name": "dsar-regel-engine",
+  "version": "8.1.0",
+  "description": "DSAR Regel-Engine – V1 der Universal Rules Infrastructure. Deterministische Regel-Engine für DSGVO-Betroffenenanfragen, ausgeliefert als eine abhängigkeitsfreie HTML-Datei.",
+  "author": "benthy",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "test": "node build.js && node --test \"test/*.test.js\""
+  },
+  "devDependencies": {
+    "jsdom": "^26.0.0"
+  }
+}
