@@ -25,7 +25,8 @@ Ausgeliefert wird eine einzige HTML-Datei ohne Abhängigkeiten, die vollständig
 
 | Baustein | Datei | Aufgabe |
 |---|---|---|
-| Rulebooks | `src/rulepacks/` | Regeln, Quellen und Outcomes als reine Daten, eine Datei je Pack |
+| Rulebooks | `src/rulepacks/` | Regeln, Quellen, Outcomes und Selbsttests als reine Daten, eine Datei je Pack |
+| Selbsttests | `src/core/rulebook-tests.js` | Führt die Testfälle eines Rulebooks auf einer eigenen Engine-Instanz aus |
 | Rules Engine | `src/core/engine.js` | Lädt und prüft ein Rulebook, wertet Fakten aus, entscheidet `PERMITTED` / `MANUAL_REVIEW` / `BLOCKED`, schreibt den Audit-Log |
 | Crypto | `src/core/crypto.js` | SHA-256, kanonisches JSON, Self-Test |
 | Actions | `src/actions/` | Gemeinsamer Ablauf (`create-action.js`: freigeben, erzeugen, hashen, protokollieren) und die Textbausteine je Pack |
@@ -37,12 +38,20 @@ Die Engine enthält keine DSGVO-Logik. Ein weiteres Rechtsgebiet ist ein weitere
 
 ### Ein neues Rule Pack hinzufügen
 
-1. Rulebook unter `src/rulepacks/` anlegen (Regeln, Outcomes, Aktion mit Eingabefeldern).
+1. Rulebook unter `src/rulepacks/` anlegen (Regeln, Outcomes, Aktion mit Eingabefeldern, Testfälle). Format: [`docs/rulebook-spec.md`](docs/rulebook-spec.md).
 2. Textbausteine unter `src/actions/` mit `createAction()` definieren.
 3. Optional einen Parser unter `src/ingestion/` schreiben.
 4. Das Pack in `src/ui/packs.js` eintragen und die Dateien in `build.js` aufnehmen.
 
-Die Tests in `test/rulepacks.test.js` gelten automatisch für jedes eingetragene Pack: Jeder mögliche Antwortpfad muss in einem Outcome enden und ein lückenloses Dokument erzeugen.
+Die Tests in `test/rulepacks.test.js` gelten automatisch für jedes eingetragene Pack: Das Rulebook muss dem Schema entsprechen, seine Testfälle müssen bestehen und jedes Outcome abdecken, und jeder mögliche Antwortpfad muss in einem Outcome enden und ein lückenloses Dokument erzeugen.
+
+## Rulebook-Format und Import
+
+- Spezifikation mit Anleitung zum Schreiben von Testfällen: [`docs/rulebook-spec.md`](docs/rulebook-spec.md)
+- JSON Schema: [`docs/rulebook.schema.json`](docs/rulebook.schema.json)
+- Beispiel zum Importieren: [`docs/examples/example-rulebook.json`](docs/examples/example-rulebook.json)
+
+Fremde Rulebooks lassen sich im Entwickler-Tab importieren. Sie werden geprüft, ihre Testfälle laufen, und nur bei Erfolg wird das Pack aktiviert, für die laufende Sitzung.
 
 ## Entwickeln
 
@@ -61,6 +70,7 @@ Der Build ist ein kurzes Skript ohne Bundler (`build.js`): Die Module werden in 
 - Die Hash-Kette des Audit Trails erkennt nachträgliche Änderungen, ist aber nicht signiert und liegt bis zum Export nur im Arbeitsspeicher des Browsers.
 - Die Fristberechnung ist ein Orientierungswert nach BGB / VO 1182/71.
 - Zwei Einträge der Fallbeispiel-Datenbank sind als „Fundstelle ungeprüft“ markiert.
+- Importierte Rulebooks sind nicht signiert. Die Selbsttests zeigen, dass ein Rulebook seinen eigenen Testfällen entspricht, nicht, dass es fachlich richtig ist.
 
 ## Lizenz
 

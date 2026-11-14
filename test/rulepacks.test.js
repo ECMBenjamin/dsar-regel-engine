@@ -15,10 +15,18 @@ import { ResponseLetterAction } from '../src/actions/response-letter.js';
 import { BreachDocumentsAction } from '../src/actions/breach-documents.js';
 import { parseBreachReport } from '../src/ingestion/breach-parser.js';
 import { parseDsarRequest } from '../src/ingestion/dsar-parser.js';
+import { runRulebookTests } from '../src/core/rulebook-tests.js';
+import { createProtocolAction } from '../src/actions/protocol-action.js';
+import { validateSchema } from './mini-schema.js';
+
+const readJson = path => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
+const EXAMPLE = readJson('../docs/examples/example-rulebook.json');
+const SCHEMA = readJson('../docs/rulebook.schema.json');
 
 const PACKS = [
     { rulebook: DSARRulebook, action: ResponseLetterAction },
-    { rulebook: BreachRulebook, action: BreachDocumentsAction }
+    { rulebook: BreachRulebook, action: BreachDocumentsAction },
+    { rulebook: EXAMPLE, action: createProtocolAction(EXAMPLE, 'record_decision') }
 ];
 
 // Engine-Freeze: Die Engine wurde für das zweite Pack nicht angefasst.
@@ -56,6 +64,18 @@ for (const { rulebook, action } of PACKS) {
             assert.equal(o.action, action.id, o.id);
             assert.equal(typeof action.templates[o.template], 'function', o.id);
         }
+    });
+
+    test(`${id}: entspricht dem JSON-Schema`, () => {
+        assert.deepEqual(validateSchema(SCHEMA, rulebook), []);
+    });
+
+    test(`${id}: eingebaute Testfälle bestehen und decken jedes Outcome ab`, () => {
+        const r = runRulebookTests(rulebook);
+        assert.equal(r.valid, true);
+        assert.deepEqual(r.results.filter(x => !x.ok).map(x => `${x.id}: ${x.message}`), []);
+        assert.ok(r.total >= rulebook.outcomes.length);
+        assert.deepEqual(r.uncoveredOutcomes, []);
     });
 
     test(`${id}: optionale Eingaben verweisen auf gültige Fakten`, () => {
@@ -244,4 +264,91 @@ test('Auskunfts-Parser: unverändertes Verhalten nach dem Auslagern', () => {
     assert.deepEqual(r.suggestions, { id_doubt: 'yes' });
     assert.equal(parseDsarRequest('Bitte löschen Sie meine Daten').requestType, 'art17');
     assert.equal(parseDsarRequest('Wir brauchen eine Fristverlängerung').requestType, 'art12_3');
+});
+
+// ---------- Selbsttests und Schema ----------
+
+const clone = x => JSON.parse(JSON.stringify(x));
+
+test('Selbsttest erkennt geänderte Regeln', () => {
+    const changed = clone(DSARRulebook);
+    changed.rules.find(r => r.id === 'DSAR-A15-01').risk.yes = 0.5;
+    const r = runRulebookTests(changed);
+    assert.equal(r.valid, true);
+    assert.deepEqual(r.results.filter(x => !x.ok).map(x => x.id), ['T-A15-01']);
+    assert.match(r.results.find(x => x.id === 'T-A15-01').message, /score/);
+    assert.deepEqual(r.uncoveredOutcomes, ['A15-IDENTITY']);
+});
+
+test('Selbsttest erkennt fehlerhafte Testfälle', () => {
+    const rb = clone(EXAMPLE);
+    rb.tests.push(
+        { id: 'T-PR-01', requestType: 'press', facts: {}, expect: { decision: 'BLOCKED' } },
+        { id: 'X-1', requestType: 'unbekannt', facts: {}, expect: { decision: 'BLOCKED' } },
+        { id: 'X-2', requestType: 'press', facts: [], expect: { decision: 'BLOCKED' } },
+        { id: 'X-3', requestType: 'press', facts: {}, expect: {} },
+        { id: 'X-4', requestType: 'press', facts: {}, expect: { decision: 'BLOCKED', verdict: 'x' } },
+        'kein Objekt'
+    );
+    const r = runRulebookTests(rb);
+    assert.equal(r.passed, 4);
+    assert.deepEqual(r.results.slice(4).map(x => x.message), [
+        'ID ist nicht eindeutig.', 'Unbekannter requestType.', 'facts muss ein Objekt sein.', 'expect.decision fehlt.',
+        'Unbekannter Schlüssel in expect (erlaubt: decision, status, outcome, score).', 'Testfall ist kein Objekt.'
+    ]);
+    assert.equal(r.results[9].id, 'tests[9]');
+});
+
+test('Selbsttest meldet ungültige Rulebooks ohne Ausnahme', () => {
+    const r = runRulebookTests({ metadata: { id: 'x', version: '1.0.0' } });
+    assert.equal(r.valid, false);
+    assert.match(r.errors[0], /Ungültiges Rulebook/);
+    assert.equal(runRulebookTests(null).valid, false);
+});
+
+test('Ohne Testfälle: gültig, aber kein Outcome abgedeckt', () => {
+    const rb = clone(EXAMPLE); delete rb.tests;
+    const r = runRulebookTests(rb);
+    assert.deepEqual([r.valid, r.total, r.failed, r.uncoveredOutcomes.length], [true, 0, 0, 4]);
+});
+
+test('Schema-Prüfer findet Abweichungen', () => {
+    const rb = clone(EXAMPLE);
+    rb.extra = 1;
+    delete rb.rules[0].provenance;
+    rb.rules[1].risk.yes = 2;
+    rb.metadata.version = '1.0';
+    rb.tests[0].expect.decision = 'ALLOW';
+    const errors = validateSchema(SCHEMA, rb);
+    for (const part of ['$: unbekanntes Feld "extra"', '$.rules[0]: Feld "provenance" fehlt', '$.rules[1].risk.yes: größer als 1', '$.metadata.version: passt nicht', '$.tests[0].expect.decision']) {
+        assert.ok(errors.some(e => e.startsWith(part)), part);
+    }
+});
+
+test('Spezifikation nennt jedes Feld des Schemas', () => {
+    const spec = readFileSync(new URL('../docs/rulebook-spec.md', import.meta.url), 'utf8');
+    const fields = new Set();
+    const walk = s => {
+        if (!s || typeof s !== 'object') return;
+        Object.keys(s.properties || {}).forEach(k => fields.add(k));
+        Object.values(s).forEach(walk);
+    };
+    walk(SCHEMA);
+    const missing = [...fields].filter(f => !spec.includes('`' + f + '`'));
+    assert.deepEqual(missing, []);
+});
+
+test('Importierte Packs: Fehlerfälle beim Bau des Packs', async () => {
+    // packs.js hängt am Browser-Bundle nicht, kann aber direkt geprüft werden.
+    const { createImportedPack } = await import('../src/ui/packs.js');
+    assert.ok(createImportedPack({}).errors.length > 0);
+    assert.match(createImportedPack(clone(DSARRulebook)).errors[0], /bereits geladen/);
+    const two = clone(EXAMPLE);
+    two.metadata.actions.push({ id: 'other', requiresStatus: ['COMPLIANT'] });
+    two.outcomes[3].action = 'other';
+    assert.match(createImportedPack(two).errors[0], /nur eine Aktion/);
+    const ok = createImportedPack(clone(EXAMPLE));
+    assert.equal(ok.pack.imported, true);
+    assert.equal(ok.pack.action.id, 'record_decision');
+    assert.deepEqual(ok.pack.parse('egal').suggestions, {});
 });

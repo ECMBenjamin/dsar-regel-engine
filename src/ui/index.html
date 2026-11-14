@@ -18,7 +18,8 @@
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
       "license": "https://opensource.org/licenses/MIT",
       "featureList": [
-        "Rulebook als reines Datenobjekt (Policy as Data)",
+        "Rulebook als reines Datenobjekt (Policy as Data) mit eingebauten Testfällen",
+        "Import fremder Rulebooks mit Strukturprüfung und Selbsttests",
         "Universal Rules Engine: Permitted / Blocked / Manual Review",
         "Hybrid-Workflow: Smart Ingestion & Strict-Gate-Prüfung",
         "BGB-Fristenrechner mit Feiertagslogik",
@@ -405,6 +406,25 @@
                         <pre id="rulebook-json" class="json-view" tabindex="0" aria-label="Rulebook als JSON"></pre>
                     </details>
                 </div>
+                <div class="card">
+                    <h2>Selbsttests &amp; Import</h2>
+                    <p>Jedes Rulebook bringt eigene Testfälle mit (Feld <code>tests</code>). Sie laufen beim Laden auf einer eigenen Engine-Instanz; schlägt ein Fall fehl, wird das Pack nicht aktiviert. Format und Anleitung: <code>docs/rulebook-spec.md</code>.</p>
+                    <h4>Selbsttest des aktiven Rule Packs</h4>
+                    <div id="selftest-summary" class="alert-box alert-info" role="status">Noch nicht ausgeführt.</div>
+                    <div class="table-wrap">
+                        <table id="selftest-table">
+                            <thead><tr><th>Testfall</th><th>Erwartet</th><th>Ergebnis</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <h4>Rulebook importieren</h4>
+                    <p>Wählen Sie eine Rulebook-Datei im Format <code>uri.rulebook/v1</code>. Sie wird lokal geprüft: Struktur, Querbezüge, Testfälle, eindeutige ID. Importierte Rulebooks gelten nur für diese Sitzung, sind nicht mitgeliefert und ungeprüft. Ihre Aktion erzeugt ein neutrales Entscheidungsprotokoll.</p>
+                    <div class="form-group">
+                        <label for="rulebook-import">Rulebook-Datei (.json)</label>
+                        <input type="file" id="rulebook-import" accept=".json,application/json">
+                    </div>
+                    <div id="import-status" class="alert-box hidden" role="status"></div>
+                </div>
             </section>
 
             <!-- ==========================================
@@ -446,7 +466,7 @@
                         </div>
                         <div class="pillar">
                             <h4>4. Verification</h4>
-                            <p>SHA-256 Self-Test beim Start, Schema-Prüfung des Rulebooks beim Laden, Hash-Kette über alle Ereignisse, Determinismus-Test und ein an Faktenlage und Vorgang gebundener Review-Sign-off. Ändert sich ein Fakt, verfällt die Freigabe. Die Kette erkennt nachträgliche Änderungen, ersetzt aber keine externe Signatur.</p>
+                            <p>SHA-256 Self-Test beim Start, Strukturprüfung und eingebaute Testfälle jedes Rulebooks beim Laden, Hash-Kette über alle Ereignisse, Determinismus-Test und ein an Faktenlage und Vorgang gebundener Review-Sign-off. Ändert sich ein Fakt, verfällt die Freigabe. Die Kette erkennt nachträgliche Änderungen, ersetzt aber keine externe Signatur.</p>
                             <p>In dieser Datei: Tab „Audit Trail“</p>
                         </div>
                         <div class="pillar">
@@ -482,7 +502,7 @@
                         <li><strong>Weitere Domain Rule Packs.</strong> Die übrigen Betroffenenrechte (Art. 16, 18, 20, 21 DSGVO) und angrenzende Regelwerke. Jedes Pack ist ein eigenes, versioniertes Rulebook.</li>
                         <li><strong>AI Agent Governance.</strong> KI-Agenten fragen die Engine über MCP ab, bevor sie ein Werkzeug aufrufen oder etwas versenden. Die Antwort (Permitted / Blocked / Manual Review) entscheidet, ob der Agent handeln darf, und wird protokolliert.</li>
                         <li><strong>Cybersecurity Policy Engine.</strong> Zugriffs-, Konfigurations- und Freigaberegeln als Rule Packs, ausgewertet von derselben Engine und mit demselben Audit Trail.</li>
-                        <li><strong>Signierte Rulebooks.</strong> Import externer Rulebooks mit Signaturprüfung, Versionshistorie und Vier-Augen-Freigabe für Regeländerungen.</li>
+                        <li><strong>Signierte Rulebooks.</strong> Signaturprüfung beim Import, Versionshistorie und Vier-Augen-Freigabe für Regeländerungen.</li>
                         <li><strong>Server-Interface.</strong> Auslieferung des Evaluation State über eine echte API bzw. einen MCP-Server, ohne den Local-First-Modus aufzugeben.</li>
                     </ul>
                 </div>

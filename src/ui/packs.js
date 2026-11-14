@@ -6,10 +6,12 @@
  * @license MIT
  */
 
+import { UniversalRulesEngine } from '../core/engine.js';
 import { DSARRulebook } from '../rulepacks/dsar-gdpr-de.js';
 import { BreachRulebook } from '../rulepacks/breach-gdpr-de.js';
 import { ResponseLetterAction } from '../actions/response-letter.js';
 import { BreachDocumentsAction } from '../actions/breach-documents.js';
+import { createProtocolAction } from '../actions/protocol-action.js';
 import { parseDsarRequest } from '../ingestion/dsar-parser.js';
 import { parseBreachReport } from '../ingestion/breach-parser.js';
 import { presets } from '../domain/content.js';
@@ -70,3 +72,53 @@ export const RULE_PACKS = [
         }
     }
 ];
+
+const IMPORTED_PACK_TEXT = {
+    ingestIntro: 'Importiertes Rule Pack ohne Parser. Beschreiben Sie den Sachverhalt in ein, zwei Sätzen. Der Text wird nicht ausgewertet; im Audit Trail wird nur seine Länge vermerkt.',
+    ingestLabel: 'Sachverhalt',
+    ingestPlaceholder: 'Kurze Beschreibung des Vorgangs',
+    ingestMissing: 'Bitte beschreiben Sie den Sachverhalt kurz.',
+    suggestionSource: 'Parser',
+    subjectLabel: 'Kurzbezeichnung des Vorgangs (optional)',
+    subjectHint: 'Erscheint als Vorgangszeile im Protokoll.',
+    actionButton: 'Aktion ausführen: Protokoll erzeugen',
+    resultTitle: 'Schritt 4: Ausgeführte Aktion – Entscheidungsprotokoll',
+    resultIntro: 'Das Protokoll wurde erst erzeugt, nachdem die Engine die Aktion freigegeben hat. Das Rulebook ist importiert und nicht mitgeliefert; seine Inhalte sind ungeprüft.',
+    exportLabel: 'Protokoll (.txt) speichern',
+    filePrefix: 'Import',
+    exportFile: 'Entscheidungsprotokoll.txt',
+    attachmentWarning: ''
+};
+
+/**
+ * Baut aus einem fremden Rulebook ein Pack für diese Sitzung: ohne Parser, mit neutralem Protokoll als Aktion.
+ * Gibt { pack } oder { errors } zurück. Die Selbsttests laufen danach separat (runRulebookTests).
+ */
+export function createImportedPack(rulebook) {
+    const errors = UniversalRulesEngine.validateRulebook(rulebook);
+    if (errors.length) return { errors: errors };
+    const md = rulebook.metadata;
+    if (RULE_PACKS.some(p => p.rulebook.metadata.id === md.id)) {
+        return { errors: [`Ein Rule Pack mit der ID "${md.id}" ist bereits geladen.`] };
+    }
+    const used = [];
+    rulebook.outcomes.forEach(o => { if (o.effect === 'ALLOW' && used.indexOf(o.action) === -1) used.push(o.action); });
+    if (used.length > 1) {
+        return { errors: ['Importierte Rulebooks dürfen nur eine Aktion verwenden. Gefunden: ' + used.join(', ') + '.'] };
+    }
+    const actionId = used[0] || (md.actions[0] && md.actions[0].id);
+    if (!actionId) return { errors: ['Das Rulebook definiert keine Aktion.'] };
+    return {
+        pack: {
+            rulebook: rulebook,
+            action: createProtocolAction(rulebook, actionId),
+            parse: () => ({
+                requestType: rulebook.requestTypes[0].id, subject: '', suggestions: {},
+                reasoning: ['Importiertes Rule Pack ohne Parser: Es werden keine Vorschläge erzeugt. Bitte alle Fragen selbst beantworten.']
+            }),
+            presets: null,
+            imported: true,
+            text: IMPORTED_PACK_TEXT
+        }
+    };
+}

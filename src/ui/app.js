@@ -12,7 +12,8 @@ import { knowledgeBase, caseDatabase } from '../domain/content.js';
 import { formatDateDE, toISODateLocal, WEEKDAYS, parseLocalDate, computeDeadline, DEADLINE_CAVEAT, GDPR_APPLICABLE_FROM } from '../domain/deadline.js';
 import { formatAttachment } from '../domain/attachment.js';
 import { $, el, haltApplication, downloadFile, copyText } from './dom.js';
-import { RULE_PACKS } from './packs.js';
+import { RULE_PACKS, createImportedPack } from './packs.js';
+import { runRulebookTests } from '../core/rulebook-tests.js';
 
 // --- Start: SHA-256 Self-Test. Schlägt er fehl, startet die Anwendung nicht. ---
 if (!sha256SelfTest()) {
@@ -23,7 +24,7 @@ if (!sha256SelfTest()) {
     throw new Error('SHA-256 Self-Test fehlgeschlagen. Anwendung gestoppt.');
 }
 
-const APP_VERSION = '8.2.0';
+const APP_VERSION = '8.3.0';
 
 const engine = new UniversalRulesEngine({ initDetails: { sha256SelfTest: 'PASSED', testVectors: SHA256_TEST_VECTORS.length } });
 let activePack = RULE_PACKS[0];
@@ -42,6 +43,10 @@ const session = {
     lastDecisionKey: null,
     execution: null
 };
+
+// Ergebnisse der Rulebook-Selbsttests je Pack-ID
+const selftests = {};
+const selftestOk = r => !!r && r.valid && r.failed === 0;
 
 const currentInput = () => ({ caseId: session.caseId, requestType: session.requestType, facts: Object.assign({}, session.facts) });
 
@@ -454,6 +459,8 @@ function startNewCase(reason) {
 function selectPack(id) {
     const next = RULE_PACKS.find(p => p.rulebook.metadata.id === id);
     if (!next || next === activePack) return;
+    // Ein Pack, dessen Selbsttests fehlschlagen, wird nicht aktiviert.
+    if (selftests[id] && !selftestOk(selftests[id])) return;
     activePack = next;
     engine.load(next.rulebook);
     renderPackInfo();
@@ -690,7 +697,7 @@ function renderPackInfo() {
 
     // Workflow-Texte
     $('pack-select').value = md.id;
-    $('pack-description').textContent = md.description;
+    $('pack-description').textContent = md.description + (activePack.imported ? ' Importiert für diese Sitzung: nicht mitgeliefert, ungeprüft.' : '');
     $('ingest-intro').textContent = text.ingestIntro;
     $('ingest-label').textContent = text.ingestLabel;
     $('ingest-text').placeholder = text.ingestPlaceholder;
@@ -746,16 +753,126 @@ function renderPackInfo() {
         metaBody.appendChild(tr);
     });
     $('rulebook-json').textContent = JSON.stringify(rb, null, 2);
+    renderSelftest();
+}
+
+// --- Rulebook-Selbsttests: Jedes Pack prüft beim Laden seine eingebauten Testfälle ---
+function runPackSelftest(pack) {
+    const result = runRulebookTests(pack.rulebook);
+    selftests[pack.rulebook.metadata.id] = result;
+    engine.log('RULEBOOK_SELFTEST', {
+        id: result.rulebookId, version: result.version, rulebookHash: result.rulebookHash,
+        total: result.total, passed: result.passed, failed: result.failed,
+        uncoveredOutcomes: result.uncoveredOutcomes, imported: !!pack.imported
+    });
+    return result;
+}
+
+function renderPackOptions() {
+    const packSelect = $('pack-select');
+    packSelect.textContent = '';
+    RULE_PACKS.forEach(p => {
+        const md = p.rulebook.metadata;
+        const check = selftests[md.id];
+        const failed = !!check && !selftestOk(check);
+        let label = `${md.name} (${md.id})`;
+        if (p.imported) label += ' – importiert, ungeprüft';
+        if (failed) label += ' – Selbsttest fehlgeschlagen';
+        const opt = el('option', label);
+        opt.value = md.id;
+        opt.disabled = failed;
+        packSelect.appendChild(opt);
+    });
+    packSelect.value = activePack.rulebook.metadata.id;
+}
+
+function renderSelftest() {
+    const summary = $('selftest-summary');
+    const tbody = document.querySelector('#selftest-table tbody');
+    if (!summary || !tbody) return;
+    tbody.textContent = '';
+    const result = selftests[activePack.rulebook.metadata.id];
+    if (!result) { summary.textContent = 'Noch nicht ausgeführt.'; return; }
+    let text = result.total ? `${result.passed} von ${result.total} Testfällen bestanden.` : 'Dieses Rulebook enthält keine Testfälle.';
+    if (result.uncoveredOutcomes.length) text += ` Ohne Testfall: ${result.uncoveredOutcomes.join(', ')}.`;
+    summary.textContent = text;
+    const complete = selftestOk(result) && result.total > 0 && result.uncoveredOutcomes.length === 0;
+    summary.className = 'alert-box ' + (complete ? 'alert-success' : 'alert-warning');
+    const fmt = o => (o ? [o.decision, o.status, o.outcome, typeof o.score === 'number' ? o.score.toFixed(2) : null]
+        .filter(x => x !== undefined && x !== null).join(' · ') : '–');
+    result.results.forEach(r => {
+        const tr = el('tr');
+        tr.appendChild(el('td', r.id + (r.description ? ' – ' + r.description : '')));
+        tr.appendChild(el('td', fmt(r.expected)));
+        tr.appendChild(el('td', (r.ok ? '✓ ' : '✗ ') + (r.actual ? fmt(r.actual) : '') + (r.ok ? '' : ' (' + r.message + ')')));
+        tbody.appendChild(tr);
+    });
+}
+
+// --- Import fremder Rulebooks (nur für diese Sitzung) ---
+function setImportStatus(kind, title, lines) {
+    const box = $('import-status');
+    box.textContent = '';
+    box.className = 'alert-box alert-' + kind;
+    box.appendChild(el('strong', title));
+    if (lines && lines.length) {
+        const ul = el('ul', null, 'mini-list');
+        lines.slice(0, 12).forEach(l => ul.appendChild(el('li', l)));
+        box.appendChild(ul);
+    }
+}
+
+function handleRulebookImport(e) {
+    const input = e.target;
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => importRulebookText(file.name, String(event.target.result));
+    reader.readAsText(file, 'UTF-8');
+    // Zurücksetzen, damit dieselbe Datei erneut gewählt werden kann.
+    input.value = '';
+}
+
+function importRulebookText(filename, text) {
+    let rulebook;
+    try {
+        rulebook = JSON.parse(text);
+    } catch (err) {
+        engine.log('RULEBOOK_IMPORT_REJECTED', { filename: filename, reason: 'INVALID_JSON' });
+        setImportStatus('danger', 'Import abgelehnt: Die Datei ist kein gültiges JSON.', []);
+        return false;
+    }
+    const result = createImportedPack(rulebook);
+    if (result.errors) {
+        engine.log('RULEBOOK_IMPORT_REJECTED', { filename: filename, reason: 'INVALID_RULEBOOK', errors: result.errors.length });
+        setImportStatus('danger', 'Import abgelehnt: Das Rulebook ist ungültig.', result.errors);
+        return false;
+    }
+    const pack = result.pack;
+    const md = pack.rulebook.metadata;
+    const check = runPackSelftest(pack);
+    if (!selftestOk(check)) {
+        delete selftests[md.id];
+        engine.log('RULEBOOK_IMPORT_REJECTED', { filename: filename, reason: 'SELFTEST_FAILED', id: md.id, failed: check.failed });
+        setImportStatus('danger', `Import abgelehnt: ${check.failed} von ${check.total} Testfällen schlagen fehl.`,
+            check.results.filter(r => !r.ok).map(r => `${r.id}: ${r.message}`));
+        return false;
+    }
+    RULE_PACKS.push(pack);
+    engine.log('RULEBOOK_IMPORTED', { filename: filename, id: md.id, version: md.version, rulebookHash: check.rulebookHash, tests: check.total, scope: 'SESSION' });
+    const notes = [`Rulebook-Hash: ${check.rulebookHash}`];
+    notes.push(check.total ? `${check.passed} von ${check.total} Testfällen bestanden.` : 'Das Rulebook enthält keine Testfälle. Seine Entscheidungen sind nicht abgesichert.');
+    if (check.uncoveredOutcomes.length) notes.push('Ohne Testfall: ' + check.uncoveredOutcomes.join(', ') + '.');
+    notes.push('Gilt nur für diese Sitzung. Nicht mitgeliefert und ungeprüft.');
+    renderPackOptions();
+    selectPack(md.id);
+    setImportStatus('success', `Importiert und aktiviert: ${md.name || md.id} (${md.id}@${md.version})`, notes);
+    return true;
 }
 
 // --- Inhalte, die für alle Packs gleich sind ---
 function renderStaticContent() {
-    const packSelect = $('pack-select');
-    RULE_PACKS.forEach(p => {
-        const opt = el('option', `${p.rulebook.metadata.name} (${p.rulebook.metadata.id})`);
-        opt.value = p.rulebook.metadata.id;
-        packSelect.appendChild(opt);
-    });
+    renderPackOptions();
 
     // Wissensdatenbank
     const kContainer = $('knowledge-container');
@@ -796,6 +913,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (o.effect === 'ALLOW' && typeof p.action.templates[o.template] !== 'function') missingTemplates.push(o.id);
     }));
     if (missingTemplates.length) engine.log('SELFTEST_FAILED', { missingTemplates: missingTemplates });
+    RULE_PACKS.forEach(runPackSelftest);
 
     engine.onLog = updateAuditUI;
     renderStaticContent();
@@ -874,6 +992,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Entwickler
     $('mcp-view').addEventListener('change', refreshDevView);
+    $('rulebook-import').addEventListener('change', handleRulebookImport);
     $('btn-dev-copy').addEventListener('click', (e) => copyText($('dev-state').textContent, e.currentTarget));
     $('btn-dev-export').addEventListener('click', () => downloadFile(`${activePack.text.filePrefix}_Evaluation_State.json`, JSON.stringify(buildEvaluationState(), null, 2)));
     $('btn-rulebook-export').addEventListener('click', () => {
@@ -891,5 +1010,7 @@ window.UniversalRules = {
     get rulebook() { return activePack.rulebook; },
     get action() { return activePack.action; },
     selectPack: selectPack,
+    selftests: selftests,
+    importRulebook: importRulebookText,
     getState: () => buildEvaluationState()
 };

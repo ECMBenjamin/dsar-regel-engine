@@ -13,7 +13,7 @@ export const BreachRulebook = {
         schema: 'uri.rulebook/v1',
         id: 'breach-gdpr-de',
         name: 'Datenpannen: Meldung und Benachrichtigung',
-        version: '1.0.0',
+        version: '1.1.0',
         domain: 'Datenschutz / Verletzung des Schutzes personenbezogener Daten',
         jurisdiction: 'EU (Verordnung (EU) 2016/679)',
         language: 'de',
@@ -298,6 +298,55 @@ export const BreachRulebook = {
                 { id: 'OBL-BRE-EXCEPTION', text: 'Voraussetzungen der Ausnahme von der Benachrichtigung belegen und aufbewahren.', when: { high_risk: 'yes' } },
                 { id: 'OBL-BRE-DOC', text: 'Vermerk zur Vorfallsakte nehmen.' }
             ]
+        }
+    ],
+
+    // Selbsttests: Fakten rein, erwartete Entscheidung raus. Format: docs/rulebook-spec.md
+    tests: [
+        {
+            id: 'T-GATE-01', description: 'Ohne bestätigte Fakten keine Freigabe (Default-Deny)',
+            requestType: 'breach', facts: {  },
+            expect: { decision: 'BLOCKED', status: 'INCOMPLETE', outcome: null, score: null }
+        },
+        {
+            id: 'T-BRE-01', description: 'Keine Verletzung: nur interner Vermerk',
+            requestType: 'breach', facts: { breach_confirmed: 'no' },
+            expect: { decision: 'PERMITTED', outcome: 'BRE-NO-BREACH', score: 1 }
+        },
+        {
+            id: 'T-BRE-02', description: 'Auftragsverarbeiter meldet an den Verantwortlichen',
+            requestType: 'breach', facts: { breach_confirmed: 'yes', role_controller: 'no' },
+            expect: { decision: 'PERMITTED', outcome: 'BRE-PROCESSOR', score: 1 }
+        },
+        {
+            id: 'T-BRE-03', description: 'Verzicht auf Meldung nur nach Prüfung',
+            requestType: 'breach', facts: { breach_confirmed: 'yes', role_controller: 'yes', risk_likely: 'no' },
+            expect: { decision: 'MANUAL_REVIEW', status: 'REVIEW_REQUIRED', outcome: 'BRE-NO-RISK', score: 1 }
+        },
+        {
+            id: 'T-BRE-04', description: 'Meldung an die Behörde ohne hohes Risiko',
+            requestType: 'breach', facts: { breach_confirmed: 'yes', role_controller: 'yes', risk_likely: 'yes', within_72h: 'yes', facts_complete: 'yes', high_risk: 'no' },
+            expect: { decision: 'PERMITTED', outcome: 'BRE-NOTIFY-AUTHORITY', score: 1 }
+        },
+        {
+            id: 'T-BRE-05', description: 'Verspätete Meldung verlangt Prüfung',
+            requestType: 'breach', facts: { breach_confirmed: 'yes', role_controller: 'yes', risk_likely: 'yes', within_72h: 'no', facts_complete: 'yes', high_risk: 'no' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'BRE-NOTIFY-AUTHORITY', score: 0.4 }
+        },
+        {
+            id: 'T-BRE-06', description: 'Verschlüsselte Daten: keine Benachrichtigung der Betroffenen',
+            requestType: 'breach', facts: { breach_confirmed: 'yes', role_controller: 'yes', risk_likely: 'yes', within_72h: 'yes', facts_complete: 'yes', high_risk: 'yes', data_unintelligible: 'yes' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'BRE-NOTIFY-AUTHORITY', score: 0.7 }
+        },
+        {
+            id: 'T-BRE-07', description: 'Hohes Risiko: Behörde und Betroffene',
+            requestType: 'breach', facts: { breach_confirmed: 'yes', role_controller: 'yes', risk_likely: 'yes', within_72h: 'yes', facts_complete: 'yes', high_risk: 'yes', data_unintelligible: 'no', risk_mitigated: 'no', disproportionate_effort: 'no' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'BRE-NOTIFY-SUBJECTS', score: 0.7 }
+        },
+        {
+            id: 'T-BRE-08', description: 'Unverhältnismäßiger Aufwand: öffentliche Bekanntmachung',
+            requestType: 'breach', facts: { breach_confirmed: 'yes', role_controller: 'yes', risk_likely: 'yes', within_72h: 'yes', facts_complete: 'yes', high_risk: 'yes', data_unintelligible: 'no', risk_mitigated: 'no', disproportionate_effort: 'yes' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'BRE-NOTIFY-PUBLIC', score: 0.56 }
         }
     ]
 };

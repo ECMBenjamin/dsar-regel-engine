@@ -1,0 +1,105 @@
+{
+  "metadata": {
+    "schema": "uri.rulebook/v1",
+    "id": "example-press-release",
+    "name": "Beispiel: Freigabe einer Pressemitteilung",
+    "version": "1.0.0",
+    "domain": "Unternehmenskommunikation (Beispiel)",
+    "jurisdiction": "Intern",
+    "language": "de",
+    "description": "Beispiel-Rulebook für den Import. Enthält nur interne Beispielregeln und keine Rechtsgrundlagen.",
+    "answerLabels": { "yes": "Ja", "no": "Nein" },
+    "scoring": {
+      "model": "multiplicative",
+      "description": "Score = Produkt der Risikofaktoren aller aktiven, bestätigten Regeln.",
+      "thresholds": { "green": 0.8, "yellow": 0.5 }
+    },
+    "decisionPolicy": { "defaultDecision": "BLOCKED", "blockAtOrBelow": 0, "reviewBelow": 0.8 },
+    "actions": [
+      {
+        "id": "record_decision",
+        "label": "Freigabeprotokoll erzeugen",
+        "requiresStatus": ["COMPLIANT", "REVIEW_COMPLETED"],
+        "inputs": {
+          "summary": { "placeholder": "z.B. Mitteilung zum neuen Standort in Köln, Versand am 20.11." }
+        }
+      }
+    ]
+  },
+  "requestTypes": [
+    { "id": "press", "label": "Pressemitteilung" }
+  ],
+  "rules": [
+    {
+      "id": "PR-01", "scope": "press", "fact": "facts_checked",
+      "question": "Sind alle Zahlen und Zitate geprüft?",
+      "answers": ["yes", "no"], "risk": { "yes": 1, "no": 0 },
+      "provenance": { "source": "Interne Richtlinie Kommunikation, Abschnitt 2 (Beispiel)", "note": "Ohne Prüfung keine Freigabe." }
+    },
+    {
+      "id": "PR-02", "scope": "press", "fact": "names_customers",
+      "question": "Werden Kunden oder Partner namentlich genannt?",
+      "answers": ["yes", "no"], "risk": { "yes": 0.7, "no": 1 },
+      "showIf": { "fact": "facts_checked", "equals": "yes" },
+      "provenance": { "source": "Interne Richtlinie Kommunikation, Abschnitt 3 (Beispiel)", "note": "Namentliche Nennung nur mit Zustimmung; die Freigabe prüft dann ein Mensch." }
+    },
+    {
+      "id": "PR-03", "scope": "press", "fact": "consent_documented",
+      "question": "Liegt die schriftliche Zustimmung aller Genannten vor?",
+      "answers": ["yes", "no"], "risk": { "yes": 1, "no": 0 },
+      "showIf": { "fact": "names_customers", "equals": "yes" },
+      "provenance": { "source": "Interne Richtlinie Kommunikation, Abschnitt 3 (Beispiel)" }
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "PR-DENY-UNCHECKED", "scope": "press", "when": { "facts_checked": "no" },
+      "effect": "DENY", "label": "Keine Freigabe", "verdict": "Nicht geprüft",
+      "blockReason": "Zahlen und Zitate sind nicht geprüft. Die Mitteilung darf nicht freigegeben werden.",
+      "legalBasis": ["Interne Richtlinie Kommunikation, Abschnitt 2 (Beispiel)"]
+    },
+    {
+      "id": "PR-DENY-CONSENT", "scope": "press", "when": { "consent_documented": "no" },
+      "effect": "DENY", "label": "Keine Freigabe", "verdict": "Zustimmung fehlt",
+      "blockReason": "Genannte Kunden oder Partner haben nicht schriftlich zugestimmt.",
+      "legalBasis": ["Interne Richtlinie Kommunikation, Abschnitt 3 (Beispiel)"]
+    },
+    {
+      "id": "PR-RELEASE-NAMED", "scope": "press", "when": { "consent_documented": "yes" },
+      "effect": "ALLOW", "action": "record_decision", "template": "protocol",
+      "label": "Freigabe mit namentlicher Nennung", "verdict": "Freigegeben",
+      "legalBasis": ["Interne Richtlinie Kommunikation, Abschnitt 3 (Beispiel)"],
+      "requiredInputs": [ { "field": "summary", "label": "Kurzbeschreibung der Mitteilung" } ],
+      "obligations": [ { "id": "OBL-PR-1", "text": "Zustimmungen zur Freigabe ablegen." } ]
+    },
+    {
+      "id": "PR-RELEASE", "scope": "press", "when": { "names_customers": "no" },
+      "effect": "ALLOW", "action": "record_decision", "template": "protocol",
+      "label": "Freigabe", "verdict": "Freigegeben",
+      "legalBasis": ["Interne Richtlinie Kommunikation, Abschnitt 2 (Beispiel)"],
+      "requiredInputs": [ { "field": "summary", "label": "Kurzbeschreibung der Mitteilung" } ]
+    }
+  ],
+  "tests": [
+    {
+      "id": "T-PR-01", "description": "Ungeprüfte Zahlen werden blockiert",
+      "requestType": "press", "facts": { "facts_checked": "no" },
+      "expect": { "decision": "BLOCKED", "outcome": "PR-DENY-UNCHECKED", "score": 0 }
+    },
+    {
+      "id": "T-PR-02", "description": "Namentliche Nennung ohne Zustimmung wird blockiert",
+      "requestType": "press", "facts": { "facts_checked": "yes", "names_customers": "yes", "consent_documented": "no" },
+      "expect": { "decision": "BLOCKED", "outcome": "PR-DENY-CONSENT", "score": 0 }
+    },
+    {
+      "id": "T-PR-03", "description": "Namentliche Nennung mit Zustimmung braucht eine menschliche Freigabe",
+      "requestType": "press", "facts": { "facts_checked": "yes", "names_customers": "yes", "consent_documented": "yes" },
+      "expect": { "decision": "MANUAL_REVIEW", "status": "REVIEW_REQUIRED", "outcome": "PR-RELEASE-NAMED", "score": 0.7 }
+    },
+    {
+      "id": "T-PR-04", "description": "Ohne Namen wird direkt freigegeben",
+      "requestType": "press", "facts": { "facts_checked": "yes", "names_customers": "no" },
+      "expect": { "decision": "PERMITTED", "outcome": "PR-RELEASE", "score": 1 }
+    }
+  ]
+}

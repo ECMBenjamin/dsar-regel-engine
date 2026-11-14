@@ -8,6 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { boot, readDist, wait } from './helpers.js';
 
 const sha = s => createHash('sha256').update(s, 'utf8').digest('hex');
@@ -111,10 +112,12 @@ test('Sitzung A: Auskunft mit Review, Drittland und Pflichtangaben', async t => 
     });
 
     await t.test('Audit: veränderter Eintrag wird erkannt', () => {
-        E.eventLog[3].details.answer = 'yes';
+        const k = E.eventLog.findIndex(e => e.action === 'USER_CONFIRMED_ANSWER');
+        assert.equal(E.eventLog[k].details.answer, 'no');
+        E.eventLog[k].details.answer = 'yes';
         click($('btn-val-chain'));
         assert.match($('prov-status').textContent, /Inkonsistenz/);
-        E.eventLog[3].details.answer = 'no';
+        E.eventLog[k].details.answer = 'no';
         click($('btn-val-chain'));
         assert.match($('prov-status').textContent, /erfolgreich/);
     });
@@ -291,7 +294,7 @@ test('Sitzung C: Datenpannen-Pack auf derselben Engine', async t => {
         const loads = E.eventLog.filter(e => e.action === 'RULEBOOK_LOADED');
         assert.deepEqual(plain(loads.map(e => e.details.id)), ['dsar-gdpr-de', 'breach-gdpr-de']);
         assert.equal(E.eventLog.at(-1).details.reason, 'RULE_PACK_CHANGED');
-        assert.match($('header-meta').textContent, /breach-gdpr-de@1\.0\.0/);
+        assert.match($('header-meta').textContent, /breach-gdpr-de@1\.1\.0/);
         assert.match($('ingest-label').textContent, /Vorfallbericht/);
         assert.equal($('q-type').options.length, 1);
         assert.equal($('btn-to-step-3').disabled, true);
@@ -374,7 +377,7 @@ test('Sitzung C: Datenpannen-Pack auf derselben Engine', async t => {
         assert.deepEqual(tools[1].inputSchema.properties.action.enum, ['generate_breach_documents']);
         $('mcp-view').value = 'rules_get_rulebook'; change($('mcp-view'));
         assert.equal(JSON.parse($('mcp-response').textContent).result.structuredContent.metadata.id, 'breach-gdpr-de');
-        assert.match(s.d.querySelector('#rulebook-meta-table').textContent, /breach-gdpr-de@1\.0\.0/);
+        assert.match(s.d.querySelector('#rulebook-meta-table').textContent, /breach-gdpr-de@1\.1\.0/);
         assert.equal(JSON.parse($('rulebook-json').textContent).metadata.id, 'breach-gdpr-de');
     });
 
@@ -391,6 +394,88 @@ test('Sitzung C: Datenpannen-Pack auf derselben Engine', async t => {
         click($('btn-to-step-4'));
         assert.match($('final-letter').textContent, /Sehr geehrte\(r\) Eva Muster,/);
         assert.match($('final-letter').textContent, /Videokonferenz-Anbieter/);
+        click($('btn-val-chain'));
+        assert.match($('prov-status').textContent, /erfolgreich/);
+        assert.deepEqual(s.errors, []);
+    });
+});
+
+test('Sitzung D: Selbsttests der Packs und Import fremder Rulebooks', async t => {
+    const s = await boot();
+    const { $, U, click, change, visible } = s;
+    const E = U.engine;
+    const example = readFileSync(new URL('../docs/examples/example-rulebook.json', import.meta.url), 'utf8');
+    const importFile = async (name, content) => {
+        const input = $('rulebook-import');
+        Object.defineProperty(input, 'files', { value: [new s.w.File([content], name)], configurable: true });
+        input.dispatchEvent(new s.w.Event('change', { bubbles: true }));
+        await wait(80);
+    };
+    const options = () => [...$('pack-select').options].map(o => o.value);
+
+    await t.test('Mitgelieferte Packs bestehen ihre Selbsttests beim Start', () => {
+        const runs = E.eventLog.filter(e => e.action === 'RULEBOOK_SELFTEST');
+        assert.deepEqual(plain(runs.map(e => [e.details.id, e.details.passed, e.details.failed, e.details.uncoveredOutcomes.length])),
+            [['dsar-gdpr-de', 14, 0, 0], ['breach-gdpr-de', 9, 0, 0]]);
+        assert.equal($('selftest-summary').textContent, '14 von 14 Testfällen bestanden.');
+        assert.equal(s.d.querySelectorAll('#selftest-table tbody tr').length, 14);
+        assert.match($('selftest-table').textContent, /T-A12-01.*BLOCKED · NON_COMPLIANT · A12-DENY-LATE · 0\.00/);
+    });
+
+    await t.test('Kaputte und ungültige Dateien werden abgelehnt', async () => {
+        await importFile('kaputt.json', '{ nicht json');
+        assert.match($('import-status').textContent, /kein gültiges JSON/);
+        await importFile('leer.json', '{}');
+        assert.match($('import-status').textContent, /Rulebook ist ungültig/);
+        const dup = JSON.parse(example); dup.metadata.id = 'dsar-gdpr-de';
+        await importFile('dup.json', JSON.stringify(dup));
+        assert.match($('import-status').textContent, /bereits geladen/);
+        assert.deepEqual(plain(options()), ['dsar-gdpr-de', 'breach-gdpr-de']);
+        assert.equal(U.rulebook.metadata.id, 'dsar-gdpr-de');
+    });
+
+    await t.test('Ein Rulebook mit fehlschlagendem Testfall wird nicht aktiviert', async () => {
+        const bad = JSON.parse(example); bad.rules[1].risk.yes = 0.9;
+        await importFile('bad.json', JSON.stringify(bad));
+        assert.match($('import-status').textContent, /1 von 4 Testfällen schlagen fehl/);
+        assert.match($('import-status').textContent, /T-PR-03: Abweichung bei: decision, status, score/);
+        assert.deepEqual(plain(options()), ['dsar-gdpr-de', 'breach-gdpr-de']);
+        assert.equal(U.selftests['example-press-release'], undefined);
+        assert.equal(E.eventLog.filter(e => e.action === 'RULEBOOK_IMPORT_REJECTED').at(-1).details.reason, 'SELFTEST_FAILED');
+    });
+
+    await t.test('Gültiges Rulebook wird geladen, gekennzeichnet und aktiviert', async () => {
+        await importFile('example-rulebook.json', example);
+        assert.match($('import-status').textContent, /Importiert und aktiviert: Beispiel: Freigabe einer Pressemitteilung/);
+        assert.match($('import-status').textContent, /Gilt nur für diese Sitzung/);
+        assert.deepEqual(plain(options()), ['dsar-gdpr-de', 'breach-gdpr-de', 'example-press-release']);
+        assert.match($('pack-select').selectedOptions[0].textContent, /importiert, ungeprüft/);
+        assert.equal(U.rulebook.metadata.id, 'example-press-release');
+        assert.match($('pack-description').textContent, /nicht mitgeliefert, ungeprüft/);
+        assert.equal($('selftest-summary').textContent, '4 von 4 Testfällen bestanden.');
+        const imported = E.eventLog.find(e => e.action === 'RULEBOOK_IMPORTED');
+        assert.equal(imported.details.scope, 'SESSION');
+        assert.equal(imported.details.rulebookHash, E.rulebookHash);
+    });
+
+    await t.test('Workflow mit dem importierten Pack erzeugt ein Protokoll', () => {
+        click($('btn-parse'));
+        assert.ok(visible('ingest-hint'));
+        $('ingest-text').value = 'Mitteilung zum neuen Standort';
+        click($('btn-parse'));
+        s.answers(['facts_checked:yes', 'names_customers:no']);
+        assert.equal($('decision-chip').textContent, 'PERMITTED');
+        click($('btn-to-step-3'));
+        click($('btn-to-step-4'));
+        assert.ok($('in-summary').classList.contains('field-missing'));
+        s.type('summary', 'Neuer Standort Köln');
+        click($('btn-to-step-4'));
+        const doc = $('final-letter').textContent;
+        assert.match(doc, /^ENTSCHEIDUNGSPROTOKOLL/);
+        assert.match(doc, /example-press-release@1\.0\.0\), importiert, nicht mitgeliefert/);
+        assert.match(doc, /- \[PR-01\] Sind alle Zahlen und Zitate geprüft\? Ja/);
+        assert.match(doc, /Kurzbeschreibung der Mitteilung: Neuer Standort Köln/);
+        assert.doesNotMatch(doc, /undefined|null/);
         click($('btn-val-chain'));
         assert.match($('prov-status').textContent, /erfolgreich/);
         assert.deepEqual(s.errors, []);

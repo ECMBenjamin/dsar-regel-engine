@@ -16,9 +16,11 @@ const read = p => readFileSync(join(root, p), 'utf8');
 const MODULES = [
     'src/core/crypto.js',
     'src/core/engine.js',
+    'src/core/rulebook-tests.js',
     'src/rulepacks/dsar-gdpr-de.js',
     'src/rulepacks/breach-gdpr-de.js',
     'src/actions/create-action.js',
+    'src/actions/protocol-action.js',
     'src/actions/response-letter.js',
     'src/actions/breach-documents.js',
     'src/ingestion/dsar-parser.js',

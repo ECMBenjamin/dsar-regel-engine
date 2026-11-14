@@ -2,6 +2,21 @@
 
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen nach [SemVer](https://semver.org/lang/de/).
 
+## [8.3.0] – 2026-11-14
+
+### Hinzugefügt
+- Spezifikation des Rulebook-Formats `uri.rulebook/v1` (`docs/rulebook-spec.md`) mit JSON Schema und Anleitung zum Schreiben von Testfällen.
+- Selbsttests im Rulebook (Feld `tests`): Sie laufen beim Laden auf einer eigenen Engine-Instanz; ein fehlschlagender Fall verhindert die Aktivierung. Ergebnis im Entwickler-Tab und als Audit-Eintrag `RULEBOOK_SELFTEST`.
+- Testfälle für beide mitgelieferten Packs (14 bzw. 9), die jedes Outcome abdecken.
+- Import fremder Rulebooks im Entwickler-Tab: Strukturprüfung, Selbsttests, eindeutige ID; gilt nur für die Sitzung und ist als ungeprüft gekennzeichnet. Importierte Packs erzeugen ein neutrales Entscheidungsprotokoll.
+- Beispiel-Rulebook `docs/examples/example-rulebook.json`.
+
+### Geändert
+- Rulebook `dsar-gdpr-de` 1.2.0 und `breach-gdpr-de` 1.1.0: nur Testfälle ergänzt, Entscheidungen unverändert.
+
+### Unverändert
+- `src/core/engine.js` (Universal Rules Engine 8.1.0).
+
 ## [8.2.0] – 2026-11-14
 
 ### Hinzugefügt

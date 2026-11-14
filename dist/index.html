@@ -18,7 +18,8 @@
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
       "license": "https://opensource.org/licenses/MIT",
       "featureList": [
-        "Rulebook als reines Datenobjekt (Policy as Data)",
+        "Rulebook als reines Datenobjekt (Policy as Data) mit eingebauten Testfällen",
+        "Import fremder Rulebooks mit Strukturprüfung und Selbsttests",
         "Universal Rules Engine: Permitted / Blocked / Manual Review",
         "Hybrid-Workflow: Smart Ingestion & Strict-Gate-Prüfung",
         "BGB-Fristenrechner mit Feiertagslogik",
@@ -577,6 +578,25 @@ footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--color-
                         <pre id="rulebook-json" class="json-view" tabindex="0" aria-label="Rulebook als JSON"></pre>
                     </details>
                 </div>
+                <div class="card">
+                    <h2>Selbsttests &amp; Import</h2>
+                    <p>Jedes Rulebook bringt eigene Testfälle mit (Feld <code>tests</code>). Sie laufen beim Laden auf einer eigenen Engine-Instanz; schlägt ein Fall fehl, wird das Pack nicht aktiviert. Format und Anleitung: <code>docs/rulebook-spec.md</code>.</p>
+                    <h4>Selbsttest des aktiven Rule Packs</h4>
+                    <div id="selftest-summary" class="alert-box alert-info" role="status">Noch nicht ausgeführt.</div>
+                    <div class="table-wrap">
+                        <table id="selftest-table">
+                            <thead><tr><th>Testfall</th><th>Erwartet</th><th>Ergebnis</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <h4>Rulebook importieren</h4>
+                    <p>Wählen Sie eine Rulebook-Datei im Format <code>uri.rulebook/v1</code>. Sie wird lokal geprüft: Struktur, Querbezüge, Testfälle, eindeutige ID. Importierte Rulebooks gelten nur für diese Sitzung, sind nicht mitgeliefert und ungeprüft. Ihre Aktion erzeugt ein neutrales Entscheidungsprotokoll.</p>
+                    <div class="form-group">
+                        <label for="rulebook-import">Rulebook-Datei (.json)</label>
+                        <input type="file" id="rulebook-import" accept=".json,application/json">
+                    </div>
+                    <div id="import-status" class="alert-box hidden" role="status"></div>
+                </div>
             </section>
 
             <!-- ==========================================
@@ -618,7 +638,7 @@ footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--color-
                         </div>
                         <div class="pillar">
                             <h4>4. Verification</h4>
-                            <p>SHA-256 Self-Test beim Start, Schema-Prüfung des Rulebooks beim Laden, Hash-Kette über alle Ereignisse, Determinismus-Test und ein an Faktenlage und Vorgang gebundener Review-Sign-off. Ändert sich ein Fakt, verfällt die Freigabe. Die Kette erkennt nachträgliche Änderungen, ersetzt aber keine externe Signatur.</p>
+                            <p>SHA-256 Self-Test beim Start, Strukturprüfung und eingebaute Testfälle jedes Rulebooks beim Laden, Hash-Kette über alle Ereignisse, Determinismus-Test und ein an Faktenlage und Vorgang gebundener Review-Sign-off. Ändert sich ein Fakt, verfällt die Freigabe. Die Kette erkennt nachträgliche Änderungen, ersetzt aber keine externe Signatur.</p>
                             <p>In dieser Datei: Tab „Audit Trail“</p>
                         </div>
                         <div class="pillar">
@@ -654,7 +674,7 @@ footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--color-
                         <li><strong>Weitere Domain Rule Packs.</strong> Die übrigen Betroffenenrechte (Art. 16, 18, 20, 21 DSGVO) und angrenzende Regelwerke. Jedes Pack ist ein eigenes, versioniertes Rulebook.</li>
                         <li><strong>AI Agent Governance.</strong> KI-Agenten fragen die Engine über MCP ab, bevor sie ein Werkzeug aufrufen oder etwas versenden. Die Antwort (Permitted / Blocked / Manual Review) entscheidet, ob der Agent handeln darf, und wird protokolliert.</li>
                         <li><strong>Cybersecurity Policy Engine.</strong> Zugriffs-, Konfigurations- und Freigaberegeln als Rule Packs, ausgewertet von derselben Engine und mit demselben Audit Trail.</li>
-                        <li><strong>Signierte Rulebooks.</strong> Import externer Rulebooks mit Signaturprüfung, Versionshistorie und Vier-Augen-Freigabe für Regeländerungen.</li>
+                        <li><strong>Signierte Rulebooks.</strong> Signaturprüfung beim Import, Versionshistorie und Vier-Augen-Freigabe für Regeländerungen.</li>
                         <li><strong>Server-Interface.</strong> Auslieferung des Evaluation State über eine echte API bzw. einen MCP-Server, ohne den Local-First-Modus aufzugeben.</li>
                     </ul>
                 </div>
@@ -1069,6 +1089,86 @@ class UniversalRulesEngine {
     }
 }
 
+// ---- src/core/rulebook-tests.js ----
+/**
+ * @file Selbsttests für Rulebooks
+ * Jedes Rulebook kann im Feld "tests" eigene Testfälle mitbringen: Fakten rein, erwartete Entscheidung raus.
+ * Die Testfälle laufen auf einer eigenen Engine-Instanz; der Audit-Log der Anwendung bleibt unberührt.
+ * Die Engine selbst kennt das Feld "tests" nicht (sie ignoriert unbekannte Felder).
+ * @author benthy
+ * @license MIT
+ */
+
+
+const EXPECT_KEYS = ['decision', 'status', 'outcome', 'score'];
+
+/**
+ * @param {object} rulebook
+ * @returns {{rulebookId, version, rulebookHash, valid, errors, total, passed, failed, results, uncoveredOutcomes}}
+ */
+function runRulebookTests(rulebook) {
+    const md = rulebook && rulebook.metadata ? rulebook.metadata : {};
+    const report = {
+        rulebookId: md.id || null, version: md.version || null, rulebookHash: null,
+        valid: false, errors: [], total: 0, passed: 0, failed: 0, results: [], uncoveredOutcomes: []
+    };
+
+    let engine;
+    try {
+        engine = new UniversalRulesEngine().load(rulebook);
+    } catch (err) {
+        report.errors.push(err.message);
+        return report;
+    }
+    report.valid = true;
+    report.rulebookHash = engine.rulebookHash;
+
+    const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+    const types = rulebook.requestTypes.map(t => t.id);
+    const cases = Array.isArray(rulebook.tests) ? rulebook.tests : [];
+    const seen = {};
+    const covered = {};
+
+    cases.forEach((tc, i) => {
+        const id = isObj(tc) && typeof tc.id === 'string' && tc.id ? tc.id : 'tests[' + i + ']';
+        const entry = {
+            id: id,
+            description: isObj(tc) && typeof tc.description === 'string' ? tc.description : '',
+            ok: false,
+            expected: isObj(tc) && isObj(tc.expect) ? tc.expect : null,
+            actual: null,
+            message: ''
+        };
+
+        let problem = '';
+        if (!isObj(tc)) problem = 'Testfall ist kein Objekt.';
+        else if (seen[id]) problem = 'ID ist nicht eindeutig.';
+        else if (types.indexOf(tc.requestType) === -1) problem = 'Unbekannter requestType.';
+        else if (!isObj(tc.facts)) problem = 'facts muss ein Objekt sein.';
+        else if (!isObj(tc.expect) || !tc.expect.decision) problem = 'expect.decision fehlt.';
+        else if (Object.keys(tc.expect).some(k => EXPECT_KEYS.indexOf(k) === -1)) problem = 'Unbekannter Schlüssel in expect (erlaubt: ' + EXPECT_KEYS.join(', ') + ').';
+        seen[id] = true;
+
+        if (problem) {
+            entry.message = problem;
+        } else {
+            const ev = engine.evaluate({ caseId: 'SELFTEST-' + id, requestType: tc.requestType, facts: tc.facts });
+            entry.actual = { decision: ev.decision, status: ev.status, outcome: ev.outcome ? ev.outcome.id : null, score: ev.score };
+            const diffs = Object.keys(tc.expect).filter(k => tc.expect[k] !== entry.actual[k]);
+            entry.ok = diffs.length === 0;
+            entry.message = entry.ok ? 'OK' : 'Abweichung bei: ' + diffs.join(', ');
+            if (entry.ok && ev.outcome) covered[ev.outcome.id] = true;
+        }
+
+        report.results.push(entry);
+        if (entry.ok) report.passed += 1; else report.failed += 1;
+    });
+
+    report.total = report.results.length;
+    report.uncoveredOutcomes = rulebook.outcomes.map(o => o.id).filter(id => !covered[id]);
+    return report;
+}
+
 // ---- src/rulepacks/dsar-gdpr-de.js ----
 /**
  * @file Domain Rule Pack: DSGVO-Betroffenenanfragen (Art. 15, 17, 12 Abs. 3)
@@ -1084,7 +1184,7 @@ const DSARRulebook = {
         schema: 'uri.rulebook/v1',
         id: 'dsar-gdpr-de',
         name: 'DSGVO-Betroffenenanfragen (DSAR)',
-        version: '1.1.0',
+        version: '1.2.0',
         domain: 'Datenschutz / Betroffenenrechte',
         jurisdiction: 'EU (Verordnung (EU) 2016/679)',
         language: 'de',
@@ -1416,6 +1516,80 @@ const DSARRulebook = {
                 { id: 'OBL-EXT-1', text: 'Neues Fristende im Fristenrechner berechnen und überwachen.' }
             ]
         }
+    ],
+
+    // Selbsttests: Fakten rein, erwartete Entscheidung raus. Format: docs/rulebook-spec.md
+    tests: [
+        {
+            id: 'T-GATE-01', description: 'Ohne bestätigte Fakten keine Freigabe (Default-Deny)',
+            requestType: 'art15', facts: {  },
+            expect: { decision: 'BLOCKED', status: 'INCOMPLETE', outcome: null, score: null }
+        },
+        {
+            id: 'T-A15-01', description: 'Identitätszweifel: Nachweis anfordern, manuell prüfen',
+            requestType: 'art15', facts: { id_doubt: 'yes' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'A15-IDENTITY', score: 0.2 }
+        },
+        {
+            id: 'T-A15-02', description: 'Exzessiver Antrag: Ablehnung nur nach Prüfung',
+            requestType: 'art15', facts: { id_doubt: 'no', excessive: 'yes' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'A15-REFUSAL', score: 0.3 }
+        },
+        {
+            id: 'T-A15-03', description: 'Keine Daten: Negativauskunft',
+            requestType: 'art15', facts: { id_doubt: 'no', excessive: 'no', data_processed: 'no' },
+            expect: { decision: 'PERMITTED', status: 'COMPLIANT', outcome: 'A15-NEGATIVE', score: 1 }
+        },
+        {
+            id: 'T-A15-04', description: 'Große Datenmenge: Präzisierung anfordern',
+            requestType: 'art15', facts: { id_doubt: 'no', excessive: 'no', data_processed: 'yes', large_amount: 'yes', third_party: 'no', third_country: 'no', electronic_format: 'no' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'A15-CLARIFY', score: 0.7 }
+        },
+        {
+            id: 'T-A15-05', description: 'Vollauskunft ohne Besonderheiten',
+            requestType: 'art15', facts: { id_doubt: 'no', excessive: 'no', data_processed: 'yes', large_amount: 'no', third_party: 'no', third_country: 'no', electronic_format: 'no' },
+            expect: { decision: 'PERMITTED', outcome: 'A15-FULL', score: 1 }
+        },
+        {
+            id: 'T-A15-06', description: 'Drittland liegt genau auf der Review-Schwelle und bleibt freigegeben',
+            requestType: 'art15', facts: { id_doubt: 'no', excessive: 'no', data_processed: 'yes', large_amount: 'no', third_party: 'no', third_country: 'yes', electronic_format: 'no' },
+            expect: { decision: 'PERMITTED', outcome: 'A15-FULL', score: 0.8 }
+        },
+        {
+            id: 'T-A17-01', description: 'Löschung bei Identitätszweifel ruht',
+            requestType: 'art17', facts: { id_doubt: 'yes' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'A17-IDENTITY', score: 0.2 }
+        },
+        {
+            id: 'T-A17-02', description: 'Kein Löschgrund: Ablehnung nur nach Prüfung',
+            requestType: 'art17', facts: { id_doubt: 'no', erasure_reason: 'no' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'A17-REJECTED', score: 1 }
+        },
+        {
+            id: 'T-A17-03', description: 'Aufbewahrungspflicht: Sperrung statt Löschung',
+            requestType: 'art17', facts: { id_doubt: 'no', erasure_reason: 'yes', erasure_exception: 'yes' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'A17-RESTRICTED', score: 0.36 }
+        },
+        {
+            id: 'T-A17-04', description: 'Löschung ohne Ausnahme',
+            requestType: 'art17', facts: { id_doubt: 'no', erasure_reason: 'yes', erasure_exception: 'no', public_data: 'no', recipients: 'no' },
+            expect: { decision: 'PERMITTED', outcome: 'A17-ERASED', score: 0.9 }
+        },
+        {
+            id: 'T-A12-01', description: 'Verlängerung nach Ablauf des ersten Monats ist blockiert',
+            requestType: 'art12_3', facts: { complex_request: 'yes', within_first_month: 'no' },
+            expect: { decision: 'BLOCKED', status: 'NON_COMPLIANT', outcome: 'A12-DENY-LATE', score: 0 }
+        },
+        {
+            id: 'T-A12-02', description: 'Verlängerung ohne Grund ist blockiert',
+            requestType: 'art12_3', facts: { complex_request: 'no', within_first_month: 'yes' },
+            expect: { decision: 'BLOCKED', outcome: 'A12-DENY-GROUND', score: 0 }
+        },
+        {
+            id: 'T-A12-03', description: 'Zulässige Fristverlängerung',
+            requestType: 'art12_3', facts: { complex_request: 'yes', within_first_month: 'yes' },
+            expect: { decision: 'PERMITTED', outcome: 'A12-EXTEND', score: 1 }
+        }
     ]
 };
 
@@ -1435,7 +1609,7 @@ const BreachRulebook = {
         schema: 'uri.rulebook/v1',
         id: 'breach-gdpr-de',
         name: 'Datenpannen: Meldung und Benachrichtigung',
-        version: '1.0.0',
+        version: '1.1.0',
         domain: 'Datenschutz / Verletzung des Schutzes personenbezogener Daten',
         jurisdiction: 'EU (Verordnung (EU) 2016/679)',
         language: 'de',
@@ -1721,6 +1895,55 @@ const BreachRulebook = {
                 { id: 'OBL-BRE-DOC', text: 'Vermerk zur Vorfallsakte nehmen.' }
             ]
         }
+    ],
+
+    // Selbsttests: Fakten rein, erwartete Entscheidung raus. Format: docs/rulebook-spec.md
+    tests: [
+        {
+            id: 'T-GATE-01', description: 'Ohne bestätigte Fakten keine Freigabe (Default-Deny)',
+            requestType: 'breach', facts: {  },
+            expect: { decision: 'BLOCKED', status: 'INCOMPLETE', outcome: null, score: null }
+        },
+        {
+            id: 'T-BRE-01', description: 'Keine Verletzung: nur interner Vermerk',
+            requestType: 'breach', facts: { breach_confirmed: 'no' },
+            expect: { decision: 'PERMITTED', outcome: 'BRE-NO-BREACH', score: 1 }
+        },
+        {
+            id: 'T-BRE-02', description: 'Auftragsverarbeiter meldet an den Verantwortlichen',
+            requestType: 'breach', facts: { breach_confirmed: 'yes', role_controller: 'no' },
+            expect: { decision: 'PERMITTED', outcome: 'BRE-PROCESSOR', score: 1 }
+        },
+        {
+            id: 'T-BRE-03', description: 'Verzicht auf Meldung nur nach Prüfung',
+            requestType: 'breach', facts: { breach_confirmed: 'yes', role_controller: 'yes', risk_likely: 'no' },
+            expect: { decision: 'MANUAL_REVIEW', status: 'REVIEW_REQUIRED', outcome: 'BRE-NO-RISK', score: 1 }
+        },
+        {
+            id: 'T-BRE-04', description: 'Meldung an die Behörde ohne hohes Risiko',
+            requestType: 'breach', facts: { breach_confirmed: 'yes', role_controller: 'yes', risk_likely: 'yes', within_72h: 'yes', facts_complete: 'yes', high_risk: 'no' },
+            expect: { decision: 'PERMITTED', outcome: 'BRE-NOTIFY-AUTHORITY', score: 1 }
+        },
+        {
+            id: 'T-BRE-05', description: 'Verspätete Meldung verlangt Prüfung',
+            requestType: 'breach', facts: { breach_confirmed: 'yes', role_controller: 'yes', risk_likely: 'yes', within_72h: 'no', facts_complete: 'yes', high_risk: 'no' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'BRE-NOTIFY-AUTHORITY', score: 0.4 }
+        },
+        {
+            id: 'T-BRE-06', description: 'Verschlüsselte Daten: keine Benachrichtigung der Betroffenen',
+            requestType: 'breach', facts: { breach_confirmed: 'yes', role_controller: 'yes', risk_likely: 'yes', within_72h: 'yes', facts_complete: 'yes', high_risk: 'yes', data_unintelligible: 'yes' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'BRE-NOTIFY-AUTHORITY', score: 0.7 }
+        },
+        {
+            id: 'T-BRE-07', description: 'Hohes Risiko: Behörde und Betroffene',
+            requestType: 'breach', facts: { breach_confirmed: 'yes', role_controller: 'yes', risk_likely: 'yes', within_72h: 'yes', facts_complete: 'yes', high_risk: 'yes', data_unintelligible: 'no', risk_mitigated: 'no', disproportionate_effort: 'no' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'BRE-NOTIFY-SUBJECTS', score: 0.7 }
+        },
+        {
+            id: 'T-BRE-08', description: 'Unverhältnismäßiger Aufwand: öffentliche Bekanntmachung',
+            requestType: 'breach', facts: { breach_confirmed: 'yes', role_controller: 'yes', risk_likely: 'yes', within_72h: 'yes', facts_complete: 'yes', high_risk: 'yes', data_unintelligible: 'no', risk_mitigated: 'no', disproportionate_effort: 'yes' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'BRE-NOTIFY-PUBLIC', score: 0.56 }
+        }
     ]
 };
 
@@ -1798,6 +2021,51 @@ function createAction(def) {
             return { executed: true, doc: doc, documentTextHash: documentTextHash, evaluation: evaluation, authorization: authorization };
         }
     };
+}
+
+// ---- src/actions/protocol-action.js ----
+/**
+ * @file Generische Action für importierte Rulebooks: neutrales Entscheidungsprotokoll
+ * Importierte Rulebooks bringen keine Textbausteine mit. Statt Schreiben an Dritte entsteht
+ * ein Protokoll aus Outcome, Rechtsgrundlagen, bestätigten Fakten, Angaben und Auflagen.
+ * Ablauf und Freigabe: siehe create-action.js.
+ * @author benthy
+ * @license MIT
+ */
+
+
+function createProtocolAction(rulebook, actionId) {
+    const md = rulebook.metadata;
+
+    const render = c => {
+        const p = c.payload;
+        const out = ['ENTSCHEIDUNGSPROTOKOLL', ''];
+        out.push(`Stelle: ${c.company}`);
+        if (c.subject) out.push(`Vorgang: ${c.subject}`);
+        out.push(`Datum: ${c.date}`);
+        out.push(`Rule Pack: ${md.name || md.id} (${md.id}@${md.version}), importiert, nicht mitgeliefert`);
+        out.push('', '1. Ergebnis', `${c.outcome.label} (${c.outcome.legalBasis.join(', ')})`);
+        out.push('', '2. Bewertung anhand der bestätigten Fakten');
+        c.assessment.forEach(a => out.push(`- [${a.ruleId}] ${a.question} ${a.answer} (${a.source})`));
+        let n = 2;
+        if (c.outcome.requiredInputs.length) {
+            out.push('', `${++n}. Angaben`);
+            c.outcome.requiredInputs.forEach(r => out.push(`${r.label}: ${p[r.field]}`));
+        }
+        if (c.outcome.obligations.length) {
+            out.push('', `${++n}. Auflagen`);
+            c.outcome.obligations.forEach(o => out.push(`- ${o.text}`));
+        }
+        if (c.reviewer) {
+            out.push('', `${++n}. Manuelle Prüfung`, `Geprüft und freigegeben durch: ${c.reviewer}`);
+        }
+        return out.join('\n');
+    };
+
+    // Jedes Template, auf das ein ALLOW-Outcome verweist, erzeugt dasselbe Protokoll.
+    const templates = {};
+    rulebook.outcomes.forEach(o => { if (o.effect === 'ALLOW') templates[o.template] = render; });
+    return createAction({ id: actionId, rulebook: rulebook, templates: templates });
 }
 
 // ---- src/actions/response-letter.js ----
@@ -2500,6 +2768,56 @@ const RULE_PACKS = [
     }
 ];
 
+const IMPORTED_PACK_TEXT = {
+    ingestIntro: 'Importiertes Rule Pack ohne Parser. Beschreiben Sie den Sachverhalt in ein, zwei Sätzen. Der Text wird nicht ausgewertet; im Audit Trail wird nur seine Länge vermerkt.',
+    ingestLabel: 'Sachverhalt',
+    ingestPlaceholder: 'Kurze Beschreibung des Vorgangs',
+    ingestMissing: 'Bitte beschreiben Sie den Sachverhalt kurz.',
+    suggestionSource: 'Parser',
+    subjectLabel: 'Kurzbezeichnung des Vorgangs (optional)',
+    subjectHint: 'Erscheint als Vorgangszeile im Protokoll.',
+    actionButton: 'Aktion ausführen: Protokoll erzeugen',
+    resultTitle: 'Schritt 4: Ausgeführte Aktion – Entscheidungsprotokoll',
+    resultIntro: 'Das Protokoll wurde erst erzeugt, nachdem die Engine die Aktion freigegeben hat. Das Rulebook ist importiert und nicht mitgeliefert; seine Inhalte sind ungeprüft.',
+    exportLabel: 'Protokoll (.txt) speichern',
+    filePrefix: 'Import',
+    exportFile: 'Entscheidungsprotokoll.txt',
+    attachmentWarning: ''
+};
+
+/**
+ * Baut aus einem fremden Rulebook ein Pack für diese Sitzung: ohne Parser, mit neutralem Protokoll als Aktion.
+ * Gibt { pack } oder { errors } zurück. Die Selbsttests laufen danach separat (runRulebookTests).
+ */
+function createImportedPack(rulebook) {
+    const errors = UniversalRulesEngine.validateRulebook(rulebook);
+    if (errors.length) return { errors: errors };
+    const md = rulebook.metadata;
+    if (RULE_PACKS.some(p => p.rulebook.metadata.id === md.id)) {
+        return { errors: [`Ein Rule Pack mit der ID "${md.id}" ist bereits geladen.`] };
+    }
+    const used = [];
+    rulebook.outcomes.forEach(o => { if (o.effect === 'ALLOW' && used.indexOf(o.action) === -1) used.push(o.action); });
+    if (used.length > 1) {
+        return { errors: ['Importierte Rulebooks dürfen nur eine Aktion verwenden. Gefunden: ' + used.join(', ') + '.'] };
+    }
+    const actionId = used[0] || (md.actions[0] && md.actions[0].id);
+    if (!actionId) return { errors: ['Das Rulebook definiert keine Aktion.'] };
+    return {
+        pack: {
+            rulebook: rulebook,
+            action: createProtocolAction(rulebook, actionId),
+            parse: () => ({
+                requestType: rulebook.requestTypes[0].id, subject: '', suggestions: {},
+                reasoning: ['Importiertes Rule Pack ohne Parser: Es werden keine Vorschläge erzeugt. Bitte alle Fragen selbst beantworten.']
+            }),
+            presets: null,
+            imported: true,
+            text: IMPORTED_PACK_TEXT
+        }
+    };
+}
+
 // ---- src/ui/app.js ----
 /**
  * @file Anwendung / Oberfläche
@@ -2519,7 +2837,7 @@ if (!sha256SelfTest()) {
     throw new Error('SHA-256 Self-Test fehlgeschlagen. Anwendung gestoppt.');
 }
 
-const APP_VERSION = '8.2.0';
+const APP_VERSION = '8.3.0';
 
 const engine = new UniversalRulesEngine({ initDetails: { sha256SelfTest: 'PASSED', testVectors: SHA256_TEST_VECTORS.length } });
 let activePack = RULE_PACKS[0];
@@ -2538,6 +2856,10 @@ const session = {
     lastDecisionKey: null,
     execution: null
 };
+
+// Ergebnisse der Rulebook-Selbsttests je Pack-ID
+const selftests = {};
+const selftestOk = r => !!r && r.valid && r.failed === 0;
 
 const currentInput = () => ({ caseId: session.caseId, requestType: session.requestType, facts: Object.assign({}, session.facts) });
 
@@ -2950,6 +3272,8 @@ function startNewCase(reason) {
 function selectPack(id) {
     const next = RULE_PACKS.find(p => p.rulebook.metadata.id === id);
     if (!next || next === activePack) return;
+    // Ein Pack, dessen Selbsttests fehlschlagen, wird nicht aktiviert.
+    if (selftests[id] && !selftestOk(selftests[id])) return;
     activePack = next;
     engine.load(next.rulebook);
     renderPackInfo();
@@ -3186,7 +3510,7 @@ function renderPackInfo() {
 
     // Workflow-Texte
     $('pack-select').value = md.id;
-    $('pack-description').textContent = md.description;
+    $('pack-description').textContent = md.description + (activePack.imported ? ' Importiert für diese Sitzung: nicht mitgeliefert, ungeprüft.' : '');
     $('ingest-intro').textContent = text.ingestIntro;
     $('ingest-label').textContent = text.ingestLabel;
     $('ingest-text').placeholder = text.ingestPlaceholder;
@@ -3242,16 +3566,126 @@ function renderPackInfo() {
         metaBody.appendChild(tr);
     });
     $('rulebook-json').textContent = JSON.stringify(rb, null, 2);
+    renderSelftest();
+}
+
+// --- Rulebook-Selbsttests: Jedes Pack prüft beim Laden seine eingebauten Testfälle ---
+function runPackSelftest(pack) {
+    const result = runRulebookTests(pack.rulebook);
+    selftests[pack.rulebook.metadata.id] = result;
+    engine.log('RULEBOOK_SELFTEST', {
+        id: result.rulebookId, version: result.version, rulebookHash: result.rulebookHash,
+        total: result.total, passed: result.passed, failed: result.failed,
+        uncoveredOutcomes: result.uncoveredOutcomes, imported: !!pack.imported
+    });
+    return result;
+}
+
+function renderPackOptions() {
+    const packSelect = $('pack-select');
+    packSelect.textContent = '';
+    RULE_PACKS.forEach(p => {
+        const md = p.rulebook.metadata;
+        const check = selftests[md.id];
+        const failed = !!check && !selftestOk(check);
+        let label = `${md.name} (${md.id})`;
+        if (p.imported) label += ' – importiert, ungeprüft';
+        if (failed) label += ' – Selbsttest fehlgeschlagen';
+        const opt = el('option', label);
+        opt.value = md.id;
+        opt.disabled = failed;
+        packSelect.appendChild(opt);
+    });
+    packSelect.value = activePack.rulebook.metadata.id;
+}
+
+function renderSelftest() {
+    const summary = $('selftest-summary');
+    const tbody = document.querySelector('#selftest-table tbody');
+    if (!summary || !tbody) return;
+    tbody.textContent = '';
+    const result = selftests[activePack.rulebook.metadata.id];
+    if (!result) { summary.textContent = 'Noch nicht ausgeführt.'; return; }
+    let text = result.total ? `${result.passed} von ${result.total} Testfällen bestanden.` : 'Dieses Rulebook enthält keine Testfälle.';
+    if (result.uncoveredOutcomes.length) text += ` Ohne Testfall: ${result.uncoveredOutcomes.join(', ')}.`;
+    summary.textContent = text;
+    const complete = selftestOk(result) && result.total > 0 && result.uncoveredOutcomes.length === 0;
+    summary.className = 'alert-box ' + (complete ? 'alert-success' : 'alert-warning');
+    const fmt = o => (o ? [o.decision, o.status, o.outcome, typeof o.score === 'number' ? o.score.toFixed(2) : null]
+        .filter(x => x !== undefined && x !== null).join(' · ') : '–');
+    result.results.forEach(r => {
+        const tr = el('tr');
+        tr.appendChild(el('td', r.id + (r.description ? ' – ' + r.description : '')));
+        tr.appendChild(el('td', fmt(r.expected)));
+        tr.appendChild(el('td', (r.ok ? '✓ ' : '✗ ') + (r.actual ? fmt(r.actual) : '') + (r.ok ? '' : ' (' + r.message + ')')));
+        tbody.appendChild(tr);
+    });
+}
+
+// --- Import fremder Rulebooks (nur für diese Sitzung) ---
+function setImportStatus(kind, title, lines) {
+    const box = $('import-status');
+    box.textContent = '';
+    box.className = 'alert-box alert-' + kind;
+    box.appendChild(el('strong', title));
+    if (lines && lines.length) {
+        const ul = el('ul', null, 'mini-list');
+        lines.slice(0, 12).forEach(l => ul.appendChild(el('li', l)));
+        box.appendChild(ul);
+    }
+}
+
+function handleRulebookImport(e) {
+    const input = e.target;
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => importRulebookText(file.name, String(event.target.result));
+    reader.readAsText(file, 'UTF-8');
+    // Zurücksetzen, damit dieselbe Datei erneut gewählt werden kann.
+    input.value = '';
+}
+
+function importRulebookText(filename, text) {
+    let rulebook;
+    try {
+        rulebook = JSON.parse(text);
+    } catch (err) {
+        engine.log('RULEBOOK_IMPORT_REJECTED', { filename: filename, reason: 'INVALID_JSON' });
+        setImportStatus('danger', 'Import abgelehnt: Die Datei ist kein gültiges JSON.', []);
+        return false;
+    }
+    const result = createImportedPack(rulebook);
+    if (result.errors) {
+        engine.log('RULEBOOK_IMPORT_REJECTED', { filename: filename, reason: 'INVALID_RULEBOOK', errors: result.errors.length });
+        setImportStatus('danger', 'Import abgelehnt: Das Rulebook ist ungültig.', result.errors);
+        return false;
+    }
+    const pack = result.pack;
+    const md = pack.rulebook.metadata;
+    const check = runPackSelftest(pack);
+    if (!selftestOk(check)) {
+        delete selftests[md.id];
+        engine.log('RULEBOOK_IMPORT_REJECTED', { filename: filename, reason: 'SELFTEST_FAILED', id: md.id, failed: check.failed });
+        setImportStatus('danger', `Import abgelehnt: ${check.failed} von ${check.total} Testfällen schlagen fehl.`,
+            check.results.filter(r => !r.ok).map(r => `${r.id}: ${r.message}`));
+        return false;
+    }
+    RULE_PACKS.push(pack);
+    engine.log('RULEBOOK_IMPORTED', { filename: filename, id: md.id, version: md.version, rulebookHash: check.rulebookHash, tests: check.total, scope: 'SESSION' });
+    const notes = [`Rulebook-Hash: ${check.rulebookHash}`];
+    notes.push(check.total ? `${check.passed} von ${check.total} Testfällen bestanden.` : 'Das Rulebook enthält keine Testfälle. Seine Entscheidungen sind nicht abgesichert.');
+    if (check.uncoveredOutcomes.length) notes.push('Ohne Testfall: ' + check.uncoveredOutcomes.join(', ') + '.');
+    notes.push('Gilt nur für diese Sitzung. Nicht mitgeliefert und ungeprüft.');
+    renderPackOptions();
+    selectPack(md.id);
+    setImportStatus('success', `Importiert und aktiviert: ${md.name || md.id} (${md.id}@${md.version})`, notes);
+    return true;
 }
 
 // --- Inhalte, die für alle Packs gleich sind ---
 function renderStaticContent() {
-    const packSelect = $('pack-select');
-    RULE_PACKS.forEach(p => {
-        const opt = el('option', `${p.rulebook.metadata.name} (${p.rulebook.metadata.id})`);
-        opt.value = p.rulebook.metadata.id;
-        packSelect.appendChild(opt);
-    });
+    renderPackOptions();
 
     // Wissensdatenbank
     const kContainer = $('knowledge-container');
@@ -3292,6 +3726,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (o.effect === 'ALLOW' && typeof p.action.templates[o.template] !== 'function') missingTemplates.push(o.id);
     }));
     if (missingTemplates.length) engine.log('SELFTEST_FAILED', { missingTemplates: missingTemplates });
+    RULE_PACKS.forEach(runPackSelftest);
 
     engine.onLog = updateAuditUI;
     renderStaticContent();
@@ -3370,6 +3805,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Entwickler
     $('mcp-view').addEventListener('change', refreshDevView);
+    $('rulebook-import').addEventListener('change', handleRulebookImport);
     $('btn-dev-copy').addEventListener('click', (e) => copyText($('dev-state').textContent, e.currentTarget));
     $('btn-dev-export').addEventListener('click', () => downloadFile(`${activePack.text.filePrefix}_Evaluation_State.json`, JSON.stringify(buildEvaluationState(), null, 2)));
     $('btn-rulebook-export').addEventListener('click', () => {
@@ -3387,6 +3823,8 @@ window.UniversalRules = {
     get rulebook() { return activePack.rulebook; },
     get action() { return activePack.action; },
     selectPack: selectPack,
+    selftests: selftests,
+    importRulebook: importRulebookText,
     getState: () => buildEvaluationState()
 };
     </script>

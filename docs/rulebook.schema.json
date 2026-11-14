@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "uri.rulebook/v1",
+  "title": "Universal Rules Infrastructure – Rulebook v1",
+  "description": "Strukturbeschreibung eines Rulebooks. Maßgeblich zur Laufzeit ist UniversalRulesEngine.validateRulebook(); sie prüft zusätzlich die Querbezüge (showIf, when, action). Erläuterungen: docs/rulebook-spec.md.",
+  "type": "object",
+  "required": ["metadata", "requestTypes", "rules", "outcomes"],
+  "properties": {
+    "metadata": { "$ref": "#/$defs/metadata" },
+    "requestTypes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/requestType" } },
+    "rules": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/rule" } },
+    "outcomes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/outcome" } },
+    "tests": { "type": "array", "items": { "$ref": "#/$defs/testCase" } }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "text": { "type": "string", "minLength": 1 },
+    "share": { "type": "number", "minimum": 0, "maximum": 1 },
+    "when": { "type": "object", "additionalProperties": { "type": "string" } },
+    "metadata": {
+      "type": "object",
+      "required": ["schema", "id", "name", "version", "scoring", "decisionPolicy", "actions"],
+      "properties": {
+        "schema": { "const": "uri.rulebook/v1" },
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "name": { "$ref": "#/$defs/text" },
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "domain": { "type": "string" },
+        "jurisdiction": { "type": "string" },
+        "language": { "type": "string" },
+        "description": { "type": "string" },
+        "answerLabels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "scoring": {
+          "type": "object",
+          "required": ["thresholds"],
+          "properties": {
+            "model": { "const": "multiplicative" },
+            "description": { "type": "string" },
+            "thresholds": {
+              "type": "object",
+              "required": ["green", "yellow"],
+              "properties": { "green": { "$ref": "#/$defs/share" }, "yellow": { "$ref": "#/$defs/share" } },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "decisionPolicy": {
+          "type": "object",
+          "required": ["defaultDecision", "blockAtOrBelow", "reviewBelow"],
+          "properties": {
+            "defaultDecision": { "enum": ["BLOCKED"] },
+            "blockAtOrBelow": { "$ref": "#/$defs/share" },
+            "reviewBelow": { "$ref": "#/$defs/share" }
+          },
+          "additionalProperties": false
+        },
+        "actions": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/action" } }
+      },
+      "additionalProperties": false
+    },
+    "action": {
+      "type": "object",
+      "required": ["id", "requiresStatus"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "label": { "type": "string" },
+        "requiresStatus": { "type": "array", "minItems": 1, "items": { "enum": ["COMPLIANT", "REVIEW_COMPLETED"] } },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": { "hint": { "type": "string" }, "placeholder": { "type": "string" }, "defaultValue": { "type": "string" } },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "requestType": {
+      "type": "object",
+      "required": ["id", "label"],
+      "properties": { "id": { "$ref": "#/$defs/id" }, "label": { "$ref": "#/$defs/text" } },
+      "additionalProperties": false
+    },
+    "rule": {
+      "type": "object",
+      "required": ["id", "scope", "fact", "question", "answers", "risk", "provenance"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "scope": { "$ref": "#/$defs/id" },
+        "fact": { "$ref": "#/$defs/id" },
+        "question": { "$ref": "#/$defs/text" },
+        "answers": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/id" } },
+        "risk": { "type": "object", "additionalProperties": { "$ref": "#/$defs/share" } },
+        "showIf": {
+          "type": "object",
+          "required": ["fact", "equals"],
+          "properties": { "fact": { "$ref": "#/$defs/id" }, "equals": { "$ref": "#/$defs/id" } },
+          "additionalProperties": false
+        },
+        "provenance": {
+          "type": "object",
+          "required": ["source"],
+          "properties": {
+            "source": { "$ref": "#/$defs/text" },
+            "quote": { "type": "string" },
+            "note": { "type": "string" },
+            "url": { "type": "string" },
+            "asOf": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "input": {
+      "type": "object",
+      "required": ["field", "label"],
+      "properties": { "field": { "$ref": "#/$defs/id" }, "label": { "$ref": "#/$defs/text" }, "when": { "$ref": "#/$defs/when" } },
+      "additionalProperties": false
+    },
+    "outcome": {
+      "type": "object",
+      "required": ["id", "scope", "when", "effect", "legalBasis"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "scope": { "$ref": "#/$defs/id" },
+        "when": { "$ref": "#/$defs/when" },
+        "effect": { "enum": ["ALLOW", "DENY"] },
+        "action": { "$ref": "#/$defs/id" },
+        "template": { "$ref": "#/$defs/id" },
+        "label": { "type": "string" },
+        "verdict": { "type": "string" },
+        "requiresReview": { "type": "boolean" },
+        "reviewReason": { "type": "string" },
+        "blockReason": { "type": "string" },
+        "acceptsAttachment": { "type": "boolean" },
+        "legalBasis": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/text" } },
+        "conditionalBasis": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["when", "basis"],
+            "properties": { "when": { "$ref": "#/$defs/when" }, "basis": { "$ref": "#/$defs/text" } },
+            "additionalProperties": false
+          }
+        },
+        "requiredInputs": { "type": "array", "items": { "$ref": "#/$defs/input" } },
+        "optionalInputs": { "type": "array", "items": { "$ref": "#/$defs/input" } },
+        "obligations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "text"],
+            "properties": { "id": { "$ref": "#/$defs/id" }, "text": { "$ref": "#/$defs/text" }, "when": { "$ref": "#/$defs/when" } },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "testCase": {
+      "type": "object",
+      "required": ["id", "requestType", "facts", "expect"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "description": { "type": "string" },
+        "requestType": { "$ref": "#/$defs/id" },
+        "facts": { "type": "object", "additionalProperties": { "type": "string" } },
+        "expect": {
+          "type": "object",
+          "required": ["decision"],
+          "properties": {
+            "decision": { "enum": ["PERMITTED", "MANUAL_REVIEW", "BLOCKED"] },
+            "status": { "enum": ["INCOMPLETE", "COMPLIANT", "REVIEW_REQUIRED", "REVIEW_COMPLETED", "NON_COMPLIANT"] },
+            "outcome": { "type": ["string", "null"] },
+            "score": { "type": ["number", "null"] }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

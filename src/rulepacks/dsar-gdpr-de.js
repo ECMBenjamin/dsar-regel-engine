@@ -12,7 +12,7 @@ export const DSARRulebook = {
         schema: 'uri.rulebook/v1',
         id: 'dsar-gdpr-de',
         name: 'DSGVO-Betroffenenanfragen (DSAR)',
-        version: '1.1.0',
+        version: '1.2.0',
         domain: 'Datenschutz / Betroffenenrechte',
         jurisdiction: 'EU (Verordnung (EU) 2016/679)',
         language: 'de',
@@ -343,6 +343,80 @@ export const DSARRulebook = {
             obligations: [
                 { id: 'OBL-EXT-1', text: 'Neues Fristende im Fristenrechner berechnen und überwachen.' }
             ]
+        }
+    ],
+
+    // Selbsttests: Fakten rein, erwartete Entscheidung raus. Format: docs/rulebook-spec.md
+    tests: [
+        {
+            id: 'T-GATE-01', description: 'Ohne bestätigte Fakten keine Freigabe (Default-Deny)',
+            requestType: 'art15', facts: {  },
+            expect: { decision: 'BLOCKED', status: 'INCOMPLETE', outcome: null, score: null }
+        },
+        {
+            id: 'T-A15-01', description: 'Identitätszweifel: Nachweis anfordern, manuell prüfen',
+            requestType: 'art15', facts: { id_doubt: 'yes' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'A15-IDENTITY', score: 0.2 }
+        },
+        {
+            id: 'T-A15-02', description: 'Exzessiver Antrag: Ablehnung nur nach Prüfung',
+            requestType: 'art15', facts: { id_doubt: 'no', excessive: 'yes' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'A15-REFUSAL', score: 0.3 }
+        },
+        {
+            id: 'T-A15-03', description: 'Keine Daten: Negativauskunft',
+            requestType: 'art15', facts: { id_doubt: 'no', excessive: 'no', data_processed: 'no' },
+            expect: { decision: 'PERMITTED', status: 'COMPLIANT', outcome: 'A15-NEGATIVE', score: 1 }
+        },
+        {
+            id: 'T-A15-04', description: 'Große Datenmenge: Präzisierung anfordern',
+            requestType: 'art15', facts: { id_doubt: 'no', excessive: 'no', data_processed: 'yes', large_amount: 'yes', third_party: 'no', third_country: 'no', electronic_format: 'no' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'A15-CLARIFY', score: 0.7 }
+        },
+        {
+            id: 'T-A15-05', description: 'Vollauskunft ohne Besonderheiten',
+            requestType: 'art15', facts: { id_doubt: 'no', excessive: 'no', data_processed: 'yes', large_amount: 'no', third_party: 'no', third_country: 'no', electronic_format: 'no' },
+            expect: { decision: 'PERMITTED', outcome: 'A15-FULL', score: 1 }
+        },
+        {
+            id: 'T-A15-06', description: 'Drittland liegt genau auf der Review-Schwelle und bleibt freigegeben',
+            requestType: 'art15', facts: { id_doubt: 'no', excessive: 'no', data_processed: 'yes', large_amount: 'no', third_party: 'no', third_country: 'yes', electronic_format: 'no' },
+            expect: { decision: 'PERMITTED', outcome: 'A15-FULL', score: 0.8 }
+        },
+        {
+            id: 'T-A17-01', description: 'Löschung bei Identitätszweifel ruht',
+            requestType: 'art17', facts: { id_doubt: 'yes' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'A17-IDENTITY', score: 0.2 }
+        },
+        {
+            id: 'T-A17-02', description: 'Kein Löschgrund: Ablehnung nur nach Prüfung',
+            requestType: 'art17', facts: { id_doubt: 'no', erasure_reason: 'no' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'A17-REJECTED', score: 1 }
+        },
+        {
+            id: 'T-A17-03', description: 'Aufbewahrungspflicht: Sperrung statt Löschung',
+            requestType: 'art17', facts: { id_doubt: 'no', erasure_reason: 'yes', erasure_exception: 'yes' },
+            expect: { decision: 'MANUAL_REVIEW', outcome: 'A17-RESTRICTED', score: 0.36 }
+        },
+        {
+            id: 'T-A17-04', description: 'Löschung ohne Ausnahme',
+            requestType: 'art17', facts: { id_doubt: 'no', erasure_reason: 'yes', erasure_exception: 'no', public_data: 'no', recipients: 'no' },
+            expect: { decision: 'PERMITTED', outcome: 'A17-ERASED', score: 0.9 }
+        },
+        {
+            id: 'T-A12-01', description: 'Verlängerung nach Ablauf des ersten Monats ist blockiert',
+            requestType: 'art12_3', facts: { complex_request: 'yes', within_first_month: 'no' },
+            expect: { decision: 'BLOCKED', status: 'NON_COMPLIANT', outcome: 'A12-DENY-LATE', score: 0 }
+        },
+        {
+            id: 'T-A12-02', description: 'Verlängerung ohne Grund ist blockiert',
+            requestType: 'art12_3', facts: { complex_request: 'no', within_first_month: 'yes' },
+            expect: { decision: 'BLOCKED', outcome: 'A12-DENY-GROUND', score: 0 }
+        },
+        {
+            id: 'T-A12-03', description: 'Zulässige Fristverlängerung',
+            requestType: 'art12_3', facts: { complex_request: 'yes', within_first_month: 'yes' },
+            expect: { decision: 'PERMITTED', outcome: 'A12-EXTEND', score: 1 }
         }
     ]
 };
