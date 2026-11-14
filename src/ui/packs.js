@@ -7,8 +7,11 @@
  */
 
 import { DSARRulebook } from '../rulepacks/dsar-gdpr-de.js';
+import { BreachRulebook } from '../rulepacks/breach-gdpr-de.js';
 import { ResponseLetterAction } from '../actions/response-letter.js';
+import { BreachDocumentsAction } from '../actions/breach-documents.js';
 import { parseDsarRequest } from '../ingestion/dsar-parser.js';
+import { parseBreachReport } from '../ingestion/breach-parser.js';
 import { presets } from '../domain/content.js';
 
 export const RULE_PACKS = [
@@ -42,6 +45,28 @@ export const RULE_PACKS = [
             filePrefix: 'DSAR',
             exportFile: 'DSAR_Antwortschreiben.txt',
             attachmentWarning: 'Achtung: Es wurde keine Datenkopie eingebunden. Das Schreiben verweist auf eine separate Anlage; diese muss dem Versand beigefügt werden (Art. 15 Abs. 3 DSGVO).'
+        }
+    },
+    {
+        rulebook: BreachRulebook,
+        action: BreachDocumentsAction,
+        parse: parseBreachReport,
+        presets: null,
+        text: {
+            ingestIntro: 'Fügen Sie die interne Beschreibung des Vorfalls ein (z.B. die Meldung der IT oder des Mitarbeiters). Der Parser erzeugt daraus Vorschläge für die nachfolgende Prüfung. Vorschläge sind keine Fakten: Die Engine wertet ausschließlich aktiv bestätigte Antworten aus.',
+            ingestLabel: 'Vorfallbericht',
+            ingestPlaceholder: 'Am Montag wurde ein unverschlüsselter Laptop mit Kundendaten gestohlen...',
+            ingestMissing: 'Bitte fügen Sie zuerst die Beschreibung des Vorfalls ein.',
+            suggestionSource: 'Vorfallbericht',
+            subjectLabel: 'Kurzbezeichnung des Vorfalls (optional)',
+            subjectHint: 'Erscheint als Vorgangszeile in den Dokumenten, z.B. „Laptop-Diebstahl Vertrieb“.',
+            actionButton: 'Aktion ausführen: Dokumente erzeugen',
+            resultTitle: 'Schritt 4: Ausgeführte Aktion – Meldung und Dokumentation',
+            resultIntro: 'Diese Dokumente wurden erst erzeugt, nachdem die Engine die Aktion freigegeben hat. Sie basieren deterministisch auf Ihren bestätigten Eingaben. Meldung und Benachrichtigung sind Entwürfe für den Meldeweg Ihrer Aufsichtsbehörde.',
+            exportLabel: 'Dokumente (.txt) speichern',
+            filePrefix: 'Datenpanne',
+            exportFile: 'Datenpanne_Meldung_und_Dokumentation.txt',
+            attachmentWarning: ''
         }
     }
 ];

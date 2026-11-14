@@ -2,7 +2,16 @@
 
 **Powered by Universal Rules Infrastructure**
 
-Deterministische Regel-Engine für DSGVO-Betroffenenanfragen (Auskunft nach Art. 15, Löschung nach Art. 17, Fristverlängerung nach Art. 12 Abs. 3). Regeln entscheiden, Aktionen setzen durch: Das Antwortschreiben entsteht erst, wenn die Engine die Aktion freigibt.
+Deterministische Regel-Engine für DSGVO-Pflichten. Regeln entscheiden, Aktionen setzen durch: Ein Dokument entsteht erst, wenn die Engine die Aktion freigibt.
+
+## Rule Packs
+
+| Pack | Inhalt | Ergebnis der Aktion |
+|---|---|---|
+| `dsar-gdpr-de` | Betroffenenanfragen: Auskunft (Art. 15), Löschung (Art. 17), Fristverlängerung (Art. 12 Abs. 3) | Antwortschreiben an die betroffene Person |
+| `breach-gdpr-de` | Datenpannen: Meldung an die Aufsichtsbehörde (Art. 33), Benachrichtigung der Betroffenen (Art. 34) | Meldungsentwurf, Benachrichtigung bzw. öffentliche Bekanntmachung und interner Vermerk nach Art. 33 Abs. 5 |
+
+Beide Packs laufen auf derselben Engine. Das zweite Pack kam hinzu, ohne die Engine zu ändern; ein Test prüft das über den SHA-256-Hash von `src/core/engine.js`.
 
 Ausgeliefert wird eine einzige HTML-Datei ohne Abhängigkeiten, die vollständig offline im Browser läuft: [`dist/index.html`](dist/index.html).
 
@@ -25,6 +34,15 @@ Ausgeliefert wird eine einzige HTML-Datei ohne Abhängigkeiten, die vollständig
 | Oberfläche | `src/ui/` | HTML, CSS, Anbindung an das DOM; `packs.js` registriert die Packs |
 
 Die Engine enthält keine DSGVO-Logik. Ein weiteres Rechtsgebiet ist ein weiteres Rulebook.
+
+### Ein neues Rule Pack hinzufügen
+
+1. Rulebook unter `src/rulepacks/` anlegen (Regeln, Outcomes, Aktion mit Eingabefeldern).
+2. Textbausteine unter `src/actions/` mit `createAction()` definieren.
+3. Optional einen Parser unter `src/ingestion/` schreiben.
+4. Das Pack in `src/ui/packs.js` eintragen und die Dateien in `build.js` aufnehmen.
+
+Die Tests in `test/rulepacks.test.js` gelten automatisch für jedes eingetragene Pack: Jeder mögliche Antwortpfad muss in einem Outcome enden und ein lückenloses Dokument erzeugen.
 
 ## Entwickeln
 

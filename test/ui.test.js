@@ -277,6 +277,126 @@ test('Sitzung B: Strict-Gate-Lücken, Datenkopie, Idempotenz, Fristenrechner', a
     });
 });
 
+test('Sitzung C: Datenpannen-Pack auf derselben Engine', async t => {
+    const s = await boot();
+    const { $, U, click, change, answer, visible, count } = s;
+    const E = U.engine;
+    const dsarHash = E.rulebookHash;
+
+    await t.test('Pack-Wechsel lädt das zweite Rulebook in dieselbe Engine', () => {
+        assert.deepEqual(plain([...$('pack-select').options].map(o => o.value)), ['dsar-gdpr-de', 'breach-gdpr-de']);
+        $('pack-select').value = 'breach-gdpr-de'; change($('pack-select'));
+        assert.equal(U.rulebook.metadata.id, 'breach-gdpr-de');
+        assert.notEqual(E.rulebookHash, dsarHash);
+        const loads = E.eventLog.filter(e => e.action === 'RULEBOOK_LOADED');
+        assert.deepEqual(plain(loads.map(e => e.details.id)), ['dsar-gdpr-de', 'breach-gdpr-de']);
+        assert.equal(E.eventLog.at(-1).details.reason, 'RULE_PACK_CHANGED');
+        assert.match($('header-meta').textContent, /breach-gdpr-de@1\.0\.0/);
+        assert.match($('ingest-label').textContent, /Vorfallbericht/);
+        assert.equal($('q-type').options.length, 1);
+        assert.equal($('btn-to-step-3').disabled, true);
+    });
+
+    await t.test('Ingestion: Vorschläge aus dem Vorfallbericht, keine Fakten', () => {
+        click($('btn-parse'));
+        assert.ok(visible('ingest-hint'));
+        assert.match($('ingest-hint').textContent, /Beschreibung des Vorfalls/);
+        $('ingest-text').value = 'Am 08.11. wurde ein unverschlüsselter Laptop mit Kundendaten und IBAN gestohlen. Bemerkt vor 4 Tagen.';
+        click($('btn-parse'));
+        assert.deepEqual(plain(U.getState().unconfirmedSuggestions), { breach_confirmed: 'yes', high_risk: 'yes', data_unintelligible: 'no', within_72h: 'no' });
+        assert.match($('dynamic-questions-container').textContent, /Vorschlag aus Vorfallbericht: Ja/);
+        assert.equal(count('USER_CONFIRMED_ANSWER'), 0);
+        assert.equal(U.getState().evaluation.decision, 'BLOCKED');
+    });
+
+    await t.test('Verspätete Meldung mit hohem Risiko verlangt Review', () => {
+        s.answers(['breach_confirmed:yes', 'role_controller:yes', 'risk_likely:yes', 'within_72h:no', 'facts_complete:no', 'high_risk:yes', 'data_unintelligible:no', 'risk_mitigated:no', 'disproportionate_effort:no']);
+        assert.equal($('score-value').textContent, '0.25');
+        assert.equal($('decision-chip').textContent, 'MANUAL_REVIEW');
+        assert.equal($('outcome-label').textContent, 'Aufsichtsbehörde melden und Betroffene benachrichtigen');
+        assert.match($('outcome-basis').textContent, /Art\. 33 Abs\. 1 S\. 2 DSGVO.*Art\. 33 Abs\. 4 DSGVO/);
+        assert.match($('obligations-list').textContent, /nachmelden/);
+        assert.equal($('btn-to-step-3').disabled, true);
+        $('reviewer-name').value = 'BT'; click($('btn-review'));
+        assert.equal($('status-chip').textContent, 'REVIEW_COMPLETED');
+    });
+
+    await t.test('Schritt 3 zeigt genau die Felder, die das Outcome verlangt', () => {
+        click($('btn-to-step-3'));
+        assert.ok(!visible('preset-box') && !visible('datadrop-section'));
+        const labels = [...s.d.querySelectorAll('#action-inputs label')].map(l => l.textContent);
+        assert.deepEqual(plain(labels.map(l => l.replace(/ \(.*$/, ''))), ['Zeitpunkt des Bekanntwerdens', 'Begründung der Verzögerung', 'Art der Verletzung', 'Datenschutzbeauftragter oder Anlaufstelle', 'Wahrscheinliche Folgen der Verletzung', 'Ergriffene oder vorgeschlagene Maßnahmen', 'Kategorien und ungefähre Zahl der betroffenen Personen und Datensätze']);
+        assert.match(labels.at(-1), /\(optional\)$/);
+        assert.match($('in-awareness').placeholder, /12\.11\.2026/);
+        assert.match($('in-delay_reason').nextElementSibling.textContent, /zu begründen/);
+        assert.equal($('in-incident').value, '');
+        assert.equal($('btn-to-step-4').textContent, 'Aktion ausführen: Dokumente erzeugen');
+    });
+
+    await t.test('Ohne Pflichtangaben keine Dokumente; danach Meldung, Benachrichtigung und Vermerk', () => {
+        click($('btn-to-step-4'));
+        assert.ok(visible('action-error'));
+        assert.match($('action-error').textContent, /REQUIRED_INPUT_MISSING/);
+        for (const f of ['awareness', 'delay_reason', 'incident', 'contact', 'consequences', 'measures']) assert.ok($('in-' + f).classList.contains('field-missing'), f);
+        assert.equal($('in-scope').classList.contains('field-missing'), false);
+        s.type('awareness', '10.11.2026, 08:00 Uhr');
+        s.type('delay_reason', 'Forensische Analyse erforderlich');
+        s.type('incident', 'Diebstahl eines unverschlüsselten Laptops');
+        s.type('contact', 'Datenschutzbeauftragte, dsb@example.org');
+        s.type('consequences', 'Missbrauch von Bankdaten');
+        s.type('measures', 'Kontosperre empfohlen, Gerät gesperrt');
+        $('q-name').value = 'Laptop-Diebstahl Vertrieb';
+        click($('btn-to-step-4'));
+        const doc = $('final-letter').textContent;
+        assert.ok(visible('step-4-generation'));
+        assert.match($('result-title').textContent, /Meldung und Dokumentation/);
+        assert.match(doc, /DOKUMENT 1 VON 3: MELDUNG AN DIE AUFSICHTSBEHÖRDE/);
+        assert.match(doc, /DOKUMENT 2 VON 3: BENACHRICHTIGUNG DER BETROFFENEN PERSONEN/);
+        assert.match(doc, /DOKUMENT 3 VON 3: INTERNER DOKUMENTATIONSVERMERK/);
+        assert.match(doc, /Vorgang: Laptop-Diebstahl Vertrieb/);
+        assert.match(doc, /Forensische Analyse erforderlich/);
+        assert.match(doc, /Geprüft und freigegeben durch: BT/);
+        assert.doesNotMatch(doc, /undefined|null/);
+        assert.equal(U.getState().enforcement.documentTextHash, sha(doc));
+        const exec = E.eventLog.filter(e => e.action === 'ACTION_EXECUTED');
+        assert.equal(exec.length, 1);
+        assert.equal(exec[0].details.action, 'generate_breach_documents');
+        assert.equal(exec[0].details.attachmentIncluded, null);
+        click($('btn-test-det'));
+        assert.match($('prov-status').textContent, /Determinismus bestätigt.*Action: zwei/);
+    });
+
+    await t.test('Entwickler-Ansicht und MCP-Mockup folgen dem aktiven Pack', () => {
+        click(s.d.querySelector('[data-target="view-dev"]'));
+        $('mcp-view').value = 'tools/list'; change($('mcp-view'));
+        const tools = JSON.parse($('mcp-response').textContent).result.tools;
+        assert.deepEqual(tools[0].inputSchema.properties.rulebook.enum, ['dsar-gdpr-de', 'breach-gdpr-de']);
+        assert.deepEqual(tools[1].inputSchema.properties.action.enum, ['generate_breach_documents']);
+        $('mcp-view').value = 'rules_get_rulebook'; change($('mcp-view'));
+        assert.equal(JSON.parse($('mcp-response').textContent).result.structuredContent.metadata.id, 'breach-gdpr-de');
+        assert.match(s.d.querySelector('#rulebook-meta-table').textContent, /breach-gdpr-de@1\.0\.0/);
+        assert.equal(JSON.parse($('rulebook-json').textContent).metadata.id, 'breach-gdpr-de');
+    });
+
+    await t.test('Zurück zum Auskunfts-Pack: Ablauf unverändert, Kette über beide Packs gültig', () => {
+        $('pack-select').value = 'dsar-gdpr-de'; change($('pack-select'));
+        assert.equal(E.rulebookHash, dsarHash);
+        assert.match($('ingest-label').textContent, /E-Mail-Text/);
+        $('ingest-text').value = 'Bitte Auskunft nach Art. 15.\n\nViele Grüße\nEva Muster';
+        click($('btn-parse'));
+        s.answers(FULL);
+        click($('btn-to-step-3'));
+        assert.ok(visible('preset-box'));
+        $('preset-selector').value = 'coaching'; change($('preset-selector'));
+        click($('btn-to-step-4'));
+        assert.match($('final-letter').textContent, /Sehr geehrte\(r\) Eva Muster,/);
+        assert.match($('final-letter').textContent, /Videokonferenz-Anbieter/);
+        click($('btn-val-chain'));
+        assert.match($('prov-status').textContent, /erfolgreich/);
+        assert.deepEqual(s.errors, []);
+    });
+});
+
 test('Build ist reproduzierbar und enthält keine Modul-Anweisungen', async () => {
     const { build } = await import('../build.js');
     const html = build();

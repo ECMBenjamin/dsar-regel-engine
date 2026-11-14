@@ -11,8 +11,8 @@
       "@context": "https://schema.org",
       "@type": "WebApplication",
       "name": "DSAR Regel-Engine",
-      "alternateName": "Universal Rules Infrastructure – Domain Rule Pack DSGVO",
-      "description": "Deterministische Regel-Engine für DSGVO-Betroffenenanfragen (Art. 15, 17, 12 Abs. 3). Strikte Trennung von Rulebook (Policy), Engine (Entscheidung) und Action (Durchsetzung). 100% Local-First.",
+      "alternateName": "Universal Rules Infrastructure – Domain Rule Packs DSGVO",
+      "description": "Deterministische Regel-Engine für DSGVO-Betroffenenanfragen (Art. 15, 17, 12 Abs. 3) und Datenpannen (Art. 33, 34). Strikte Trennung von Rulebook (Policy), Engine (Entscheidung) und Action (Durchsetzung). 100% Local-First.",
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "Any",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
@@ -23,7 +23,8 @@
         "Hybrid-Workflow: Smart Ingestion & Strict-Gate-Prüfung",
         "BGB-Fristenrechner mit Feiertagslogik",
         "SHA-256 Audit Trail",
-        "Dokumentengenerierung als freigegebene Action (Art. 15 a-h, Art. 17)",
+        "Zwei Rule Packs auf derselben Engine: Betroffenenanfragen und Datenpannen",
+        "Dokumentengenerierung als freigegebene Action (Art. 15 a-h, Art. 17, Art. 33, Art. 34)",
         "Maschinenlesbarer Evaluation State (MCP/API-Mockup)"
       ]
     }
@@ -38,7 +39,7 @@
         <header>
             <h1>DSAR Regel-Engine</h1>
             <div class="brand-subtitle">Powered by Universal Rules Infrastructure</div>
-            <p class="lead">Deterministische Regel-Engine für DSGVO-Betroffenenanfragen. Regeln entscheiden, Aktionen setzen durch. 100% Offline. Zero Dependencies.</p>
+            <p class="lead">Deterministische Regel-Engine für DSGVO-Betroffenenanfragen und Datenpannen. Regeln entscheiden, Aktionen setzen durch. 100% Offline. Zero Dependencies.</p>
             <div class="header-meta" id="header-meta"></div>
         </header>
 
@@ -414,6 +415,7 @@
                     <h2>Vision: Universal Rules Infrastructure</h2>
                     <p>Die DSAR Regel-Engine ist die V1 einer <strong>Universal Rules Infrastructure</strong>: einer Schicht, die Regeln strikt von ihrer Durchsetzung trennt. Regeln liegen als versionierte Daten vor, eine generische Engine wertet sie deterministisch aus, und erst ihre Entscheidung gibt eine Aktion frei. Das Prinzip ist an den Open Policy Agent (OPA) angelehnt: Die Policy-Entscheidung ist von der Stelle entkoppelt, die sie durchsetzt.</p>
                     <p>Fachliches steckt ausschließlich in <strong>Domain Rule Packs</strong>. Die Engine selbst kennt keine DSGVO; sie kennt nur Regeln, Fakten, Risikofaktoren, Outcomes und Aktionen. Ein weiteres Rechtsgebiet ist damit ein weiteres Rulebook, kein neues Programm.</p>
+                    <p>Diese Version enthält zwei Packs: <strong>Betroffenenanfragen</strong> (Art. 15, 17, 12 Abs. 3 DSGVO) und <strong>Datenpannen</strong> (Art. 33, 34 DSGVO). Das zweite Pack wurde hinzugefügt, ohne eine Zeile der Engine zu ändern; ein Test sichert das über einen Hash der Engine-Datei ab.</p>
 
                     <div class="pipeline">
                         <div class="pipe-step"><span class="pipe-no">01 · INPUT</span><strong>Bestätigte Fakten</strong><p>Parser-Vorschläge werden erst durch Klick zu Fakten (Strict-Gate).</p></div>
@@ -430,7 +432,7 @@
                         <div class="pillar">
                             <h4>1. Rulebook</h4>
                             <p>Policy as Data. Jede Regel trägt ID, fachliche Frage, Risikofaktoren je Antwort, Rechtsquelle und Abhängigkeit (<code>showIf</code>). Eine Entscheidungstabelle (<code>outcomes</code>) ordnet Faktenlagen einer Aktion, Rechtsgrundlagen, Pflichtangaben und Auflagen zu.</p>
-                            <p>In dieser Datei: <code>DSARRulebook</code></p>
+                            <p>In dieser Datei: <code>DSARRulebook</code>, <code>BreachRulebook</code></p>
                         </div>
                         <div class="pillar">
                             <h4>2. Rules Engine</h4>

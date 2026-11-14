@@ -23,7 +23,7 @@ if (!sha256SelfTest()) {
     throw new Error('SHA-256 Self-Test fehlgeschlagen. Anwendung gestoppt.');
 }
 
-const APP_VERSION = '8.1.0';
+const APP_VERSION = '8.2.0';
 
 const engine = new UniversalRulesEngine({ initDetails: { sha256SelfTest: 'PASSED', testVectors: SHA256_TEST_VECTORS.length } });
 let activePack = RULE_PACKS[0];
