@@ -492,12 +492,24 @@ test('Build ist reproduzierbar und enthält keine Modul-Anweisungen', async () =
     assert.doesNotMatch(html, /<script[^>]+src=|<link[^>]+href=|https?:\/\/(?!schema\.org|opensource\.org)/);
 });
 
-test('Projektseite lädt nichts von außen und verlinkt die Anwendung', () => {
-    const page = readFileSync(new URL('../docs/index.html', import.meta.url), 'utf8');
-    assert.doesNotMatch(page, /<script|<link[^>]+href=|<img|@import|url\(/i);
-    assert.match(page, /href="app\/"/);
-    assert.match(page, /href="https:\/\/benjaminthyssen\.com"/);
-    assert.match(page, /keine Rechtsberatung/i);
-    const anchors = [...page.matchAll(/href="#([a-z-]+)"/g)].map(m => m[1]);
-    for (const a of anchors) assert.ok(page.includes(`id="${a}"`), a);
+test('Projektseiten (DE/EN) laden nichts von außen, verlinken App und einander', () => {
+    const read = f => readFileSync(new URL(f, import.meta.url), 'utf8');
+    const css = read('../docs/assets/site.css');
+    assert.doesNotMatch(css, /@import|url\(|https?:\/\//i);
+    const pages = [
+        { file: '../docs/index.html', lang: 'de', app: 'href="app/"', other: 'href="en/"', css: 'href="assets/site.css"', warn: /keine Rechtsberatung/i },
+        { file: '../docs/en/index.html', lang: 'en', app: 'href="../app/"', other: 'href="../"', css: 'href="../assets/site.css"', warn: /not legal advice/i }
+    ];
+    for (const p of pages) {
+        const page = read(p.file);
+        assert.match(page, new RegExp(`<html lang="${p.lang}"`));
+        assert.doesNotMatch(page, /<script|<img|@import|url\(/i);
+        const links = [...page.matchAll(/<link[^>]+href="([^"]+)"/g)].map(m => m[1]);
+        for (const l of links) assert.ok(!/^https?:/.test(l) || /ecmbenjamin\.github\.io/.test(l), l);
+        assert.ok(page.includes(p.css) && page.includes(p.app) && page.includes(p.other));
+        assert.match(page, /href="https:\/\/benjaminthyssen\.com"/);
+        assert.match(page, p.warn);
+        const anchors = [...page.matchAll(/href="#([a-z-]+)"/g)].map(m => m[1]);
+        for (const a of anchors) assert.ok(page.includes(`id="${a}"`), a);
+    }
 });

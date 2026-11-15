@@ -1,0 +1,101 @@
+/* Gemeinsames Stylesheet der Projektseite (DE und EN). @author benthy @license MIT */
+:root {
+    --ink: #0f172a; --text: #1f2937; --muted: #5b6472; --line: #e6e8ec; --bg: #ffffff; --soft: #f7f8fa;
+    --accent: #1a3d6b; --accent-hover: #122b4d;
+    --ok: #15803d; --review: #b45309; --block: #b91c1c;
+    --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--accent-hover); }
+a:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+p { margin: 0 0 16px; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+
+/* Kopfzeile */
+.topbar { position: sticky; top: 0; z-index: 10; background: rgba(255,255,255,0.92); backdrop-filter: saturate(160%) blur(10px); -webkit-backdrop-filter: saturate(160%) blur(10px); border-bottom: 1px solid var(--line); }
+.topbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 20px; height: 60px; }
+.brand { font-weight: 650; color: var(--ink); text-decoration: none; letter-spacing: -0.01em; }
+.topnav { display: flex; align-items: center; gap: 26px; font-size: 0.9rem; }
+.topnav a { color: var(--muted); text-decoration: none; }
+.topnav a:hover { color: var(--ink); }
+.lang { display: inline-flex; font-family: var(--mono); font-size: 0.78rem; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.lang a, .lang span { padding: 4px 11px; text-decoration: none; }
+.lang span { background: var(--ink); color: #fff; }
+.lang a { color: var(--muted); }
+.lang a:hover { background: var(--soft); color: var(--ink); }
+
+/* Einstieg */
+.hero { padding-top: 104px; padding-bottom: 88px; }
+.eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 22px; }
+h1 { font-size: clamp(2.3rem, 6vw, 4rem); line-height: 1.06; letter-spacing: -0.035em; color: var(--ink); margin: 0 0 26px; max-width: 15ch; font-weight: 700; }
+.lead { font-size: 1.2rem; line-height: 1.6; color: var(--muted); max-width: 60ch; margin: 0 0 34px; }
+.btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 30px; }
+.btn { display: inline-flex; align-items: center; padding: 12px 22px; border-radius: 8px; font-weight: 600; font-size: 0.96rem; text-decoration: none; border: 1px solid transparent; transition: background-color .2s, border-color .2s, color .2s; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); color: #fff; }
+.btn-ghost { color: var(--ink); border-color: var(--line); }
+.btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+.facts { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); margin: 0; }
+.facts span + span::before { content: "·"; margin: 0 10px; color: #b4bac4; }
+
+/* Abschnitte: Beschriftung links, Inhalt rechts */
+section { border-top: 1px solid var(--line); padding: 80px 0; }
+.sec { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; }
+.sec > .label { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding-top: 8px; }
+h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); line-height: 1.2; letter-spacing: -0.025em; color: var(--ink); margin: 0 0 16px; font-weight: 700; max-width: 22ch; }
+h3 { font-size: 1.02rem; color: var(--ink); margin: 0 0 6px; font-weight: 650; }
+.intro { color: var(--muted); font-size: 1.05rem; max-width: 62ch; margin-bottom: 40px; }
+
+/* Ablauf: ohne Kästen, nur Linie und Nummer */
+.pipeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; margin: 0 0 28px; padding: 0; list-style: none; counter-reset: step; }
+.pipeline li { counter-increment: step; border-top: 1px solid var(--ink); padding-top: 14px; color: var(--muted); font-size: 0.94rem; line-height: 1.6; }
+.pipeline li::before { content: "0" counter(step); display: block; font-family: var(--mono); font-size: 0.74rem; color: var(--muted); margin-bottom: 8px; }
+.pipeline strong { display: block; color: var(--ink); font-size: 1.02rem; margin-bottom: 4px; }
+.note { color: var(--muted); font-size: 0.94rem; margin: 0; }
+.tag { font-family: var(--mono); font-size: 0.78rem; font-weight: 600; margin-right: 6px; }
+.t-ok { color: var(--ok); } .t-review { color: var(--review); } .t-block { color: var(--block); }
+
+/* Regelwerke: Liste mit feinen Trennlinien */
+.rows { margin: 0 0 24px; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.rows li { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 28px; padding: 22px 0; border-bottom: 1px solid var(--line); }
+.rows .id { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); padding-top: 3px; }
+.rows p { margin: 0; color: var(--muted); font-size: 0.97rem; }
+.rows h3 { margin-bottom: 4px; }
+
+/* Begründungen: zweispaltig, nur Text */
+.why { display: grid; grid-template-columns: 1fr 1fr; gap: 44px 48px; counter-reset: why; }
+.why article { counter-increment: why; }
+.why article::before { content: counter(why, decimal-leading-zero); display: block; font-family: var(--mono); font-size: 0.74rem; color: var(--muted); margin-bottom: 8px; }
+.why p { margin: 0; color: var(--muted); font-size: 0.96rem; }
+
+/* Grenzen und Listen */
+.plain { margin: 0; padding: 0; list-style: none; }
+.plain li { padding: 14px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 0.97rem; }
+.plain li:first-child { border-top: 1px solid var(--line); }
+.plain strong { color: var(--ink); }
+
+/* Code */
+pre { font-family: var(--mono); font-size: 0.85rem; line-height: 1.65; background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 20px 22px; overflow-x: auto; margin: 0 0 28px; }
+code { font-family: var(--mono); font-size: 0.88em; }
+
+footer { border-top: 1px solid var(--line); padding: 32px 0 48px; font-size: 0.86rem; color: var(--muted); }
+footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+footer a { color: var(--muted); }
+
+@media (max-width: 900px) {
+    .sec { grid-template-columns: 1fr; gap: 14px; }
+    .pipeline { grid-template-columns: 1fr 1fr; }
+    .why { grid-template-columns: 1fr; gap: 32px; }
+}
+@media (max-width: 620px) {
+    .hero { padding-top: 64px; padding-bottom: 56px; }
+    section { padding: 56px 0; }
+    .topnav a.hide-sm { display: none; }
+    .pipeline { grid-template-columns: 1fr; }
+    .rows li { grid-template-columns: 1fr; gap: 6px; }
+}

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DSAR Rules Engine – Rules decide, actions enforce</title>
+    <meta name="description" content="An open, deterministic rules engine for GDPR data subject requests and data breaches. Runs entirely in the browser as a single HTML file. By Benjamin Thyssen.">
+    <meta name="author" content="Benjamin Thyssen">
+    <meta property="og:title" content="DSAR Rules Engine">
+    <meta property="og:description" content="Rules as data, an engine that executes them, and documents that only exist after approval. 100% local in the browser.">
+    <meta property="og:type" content="website">
+    <link rel="alternate" hreflang="de" href="https://ecmbenjamin.github.io/dsar-regel-engine/">
+    <link rel="alternate" hreflang="en" href="https://ecmbenjamin.github.io/dsar-regel-engine/en/">
+    <link rel="stylesheet" href="../assets/site.css">
+    <!--
+        Project page of the DSAR Regel-Engine (GitHub Pages, folder /docs), English version.
+        German version: ../index.html. The application lives at ../app/index.html (copied by build.js).
+        @author benthy
+        @license MIT
+    -->
+</head>
+<body>
+    <header class="topbar">
+        <div class="wrap">
+            <a class="brand" href="#top">DSAR Rules Engine</a>
+            <nav class="topnav" aria-label="Page navigation">
+                <a class="hide-sm" href="#function">How it works</a>
+                <a class="hide-sm" href="#why">Why this way</a>
+                <a class="hide-sm" href="#limits">Limits</a>
+                <a href="https://github.com/ECMBenjamin/dsar-regel-engine">GitHub</a>
+                <span class="lang" aria-label="Language"><a href="../" hreflang="de" lang="de">DE</a><span aria-current="true">EN</span></span>
+            </nav>
+        </div>
+    </header>
+
+    <main id="top">
+        <div class="wrap hero">
+            <p class="eyebrow">Universal Rules Infrastructure · V1</p>
+            <h1>Rules decide. Actions enforce.</h1>
+            <p class="lead">The DSAR Rules Engine walks you step by step through GDPR data subject requests and data breaches. The reply letter or the notification only exists once the engine approves the action. Everything runs in a single HTML file in your browser; no data is transmitted.</p>
+            <div class="btn-row">
+                <a class="btn btn-primary" href="../app/">Try it in the browser</a>
+                <a class="btn btn-ghost" href="https://github.com/ECMBenjamin/dsar-regel-engine">Code on GitHub</a>
+            </div>
+            <p class="facts"><span>100% local</span><span>one HTML file</span><span>no dependencies</span><span>MIT license</span><span>not legal advice</span></p>
+        </div>
+
+        <section id="function">
+            <div class="wrap sec">
+                <div class="label">How it works</div>
+                <div>
+                    <h2>Four steps, always in the same order</h2>
+                    <p class="intro">The software suggests, the human confirms, the engine decides.</p>
+                    <ol class="pipeline">
+                        <li><strong>Ingest</strong>Paste an email or an incident report. A parser makes suggestions, nothing more.</li>
+                        <li><strong>Review</strong>Every legal question is confirmed with a click, with the provision and its reasoning next to it.</li>
+                        <li><strong>Decide</strong>The engine evaluates the confirmed facts and approves the action, requires a review, or blocks it.</li>
+                        <li><strong>Execute</strong>Only now is the document produced. Every step lands in a hash-chained log.</li>
+                    </ol>
+                    <p class="note">Possible decisions:
+                        <span class="tag t-ok">PERMITTED</span><span class="tag t-review">MANUAL_REVIEW</span><span class="tag t-block">BLOCKED</span></p>
+                </div>
+            </div>
+        </section>
+
+        <section id="rulebooks">
+            <div class="wrap sec">
+                <div class="label">Rulebooks</div>
+                <div>
+                    <h2>Two rulebooks, one engine</h2>
+                    <p class="intro">The domain knowledge lives in rulebooks that are plain data. The engine knows nothing about the GDPR; it only executes what a rulebook describes.</p>
+                    <ul class="rows">
+                        <li>
+                            <span class="id">dsar-gdpr-de</span>
+                            <div><h3>Data subject requests</h3><p>Access (Art. 15), erasure (Art. 17) and extension of the deadline (Art. 12(3) GDPR). The result is the matching reply letter, from a negative response to a full disclosure with a copy of the data.</p></div>
+                        </li>
+                        <li>
+                            <span class="id">breach-gdpr-de</span>
+                            <div><h3>Data breaches</h3><p>Notification to the supervisory authority (Art. 33) and communication to data subjects (Art. 34 GDPR). The result is a draft notification, the communication to data subjects and an internal record.</p></div>
+                        </li>
+                        <li>
+                            <span class="id">uri.rulebook/v1</span>
+                            <div><h3>Your own rulebooks</h3><p>The format is documented. Your own rulebooks can be imported as JSON; they ship with their test cases and are only activated if all of them pass. <a href="https://github.com/ECMBenjamin/dsar-regel-engine/blob/main/docs/rulebook-spec.md">Read the specification</a> (German)</p></div>
+                        </li>
+                    </ul>
+                    <p class="note">Also included: a deadline calculator with public holidays for all 16 German states, and a view that shows every decision as machine-readable JSON.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="why">
+            <div class="wrap sec">
+                <div class="label">Why this way</div>
+                <div>
+                    <h2>Six deliberate design decisions</h2>
+                    <p class="intro">They explain why the tool behaves differently from a chatbot or a web form.</p>
+                    <div class="why">
+                        <article>
+                            <h3>Rules are data, not code</h3>
+                            <p>Anyone who wants to check what the tool decides should not have to read program code. Each rule is an entry with a question, a legal source and an effect. The principle is borrowed from Open Policy Agent: the decision is separate from the place that enforces it. The second rulebook was added without changing a single line of the engine.</p>
+                        </article>
+                        <article>
+                            <h3>No AI makes the decision</h3>
+                            <p>With legal questions the same input must always lead to the same result, and you must be able to see why. That is why the engine is deterministic. The parser only reads the text aloud; something becomes a fact only through a click.</p>
+                        </article>
+                        <article>
+                            <h3>No silent assumptions</h3>
+                            <p>As long as a question is open, everything stays locked. If you change an earlier answer, the answers that depend on it are deleted and must be confirmed again. That costs a few clicks and prevents a letter from resting on an assumption nobody made.</p>
+                        </article>
+                        <article>
+                            <h3>The document comes last</h3>
+                            <p>A letter is not produced on the side but only after the engine approves it. For delicate outcomes, such as a refusal or a late notification, it additionally requires sign-off by a named person. That sign-off applies to exactly this set of facts.</p>
+                        </article>
+                        <article>
+                            <h3>Everything stays on your machine</h3>
+                            <p>Data subject requests and incident reports contain personal data. So there is no server, no account and no scripts loaded from elsewhere, just one file you can also open offline.</p>
+                        </article>
+                        <article>
+                            <h3>A log that states its limits</h3>
+                            <p>Each step is chained to the previous one with SHA-256, so later changes stand out. This supports accountability. It is not a guarantee against deliberate tampering in the browser, and the tool says so.</p>
+                        </article>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="limits">
+            <div class="wrap sec">
+                <div class="label">Limits</div>
+                <div>
+                    <h2>What it is not</h2>
+                    <p class="intro">A legal tool should be honest about where it stops.</p>
+                    <ul class="plain">
+                        <li><strong>Not legal advice.</strong> The tool is a workflow assistant. The rulebooks have not yet been reviewed by a data protection lawyer or officer.</li>
+                        <li><strong>Sources in progress.</strong> The short excerpts of statutory text have not yet been checked word for word against the originals; two citations among the case examples are flagged as unverified in the tool.</li>
+                        <li><strong>Risk values are set, not derived.</strong> The factors and thresholds are reasoned assumptions.</li>
+                        <li><strong>Deadlines are guidance values.</strong> Whether the German Civil Code or Regulation 1182/71 applies is disputed in detail.</li>
+                        <li><strong>Cases are not saved.</strong> The session is gone after a reload; export what you need.</li>
+                        <li><strong>German only for now.</strong> The application and the rulebooks are in German; an English interface is planned.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="contribute">
+            <div class="wrap sec">
+                <div class="label">Contribute</div>
+                <div>
+                    <h2>Try it and get involved</h2>
+                    <p class="intro">The live version is the quickest way in. If you want to read or change the code:</p>
+                    <pre>git clone https://github.com/ECMBenjamin/dsar-regel-engine.git
+cd dsar-regel-engine
+npm install   # only needed for the tests
+npm test      # builds the file and checks every answer path</pre>
+                    <ul class="plain">
+                        <li><strong>Lawyer or data protection officer?</strong> A critical look at the rules and text modules helps most. Test cases can be written without programming; the specification explains how.</li>
+                        <li><strong>Developer?</strong> Writing your own rulebook is the best way in. Please report bugs and ideas as an <a href="https://github.com/ECMBenjamin/dsar-regel-engine/issues">issue</a>.</li>
+                        <li><strong>Planned next:</strong> verified sources per rule, signed exports, local storage of cases, and an interface that lets AI agents query the engine before they act.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="about">
+            <div class="wrap sec">
+                <div class="label">About</div>
+                <div>
+                    <p>The DSAR Rules Engine is a project by <a href="https://benjaminthyssen.com">Benjamin Thyssen</a>. It is the first version of a larger idea: an infrastructure in which rules exist as versioned data, an engine evaluates them traceably, and only its decision releases an action, whether a human or an AI agent wants to act.</p>
+                    <p><a href="https://benjaminthyssen.com">benjaminthyssen.com</a> · <a href="https://github.com/ECMBenjamin">GitHub</a></p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="wrap">
+            <span>© 2026 Benjamin Thyssen · MIT license · Built with AI assistance</span>
+            <span>Workflow assistant, not legal advice.</span>
+        </div>
+    </footer>
+</body>
+</html>

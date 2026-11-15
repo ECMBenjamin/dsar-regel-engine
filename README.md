@@ -15,7 +15,7 @@ Beide Packs laufen auf derselben Engine. Das zweite Pack kam hinzu, ohne die Eng
 
 Ausgeliefert wird eine einzige HTML-Datei ohne Abhängigkeiten, die vollständig offline im Browser läuft: [`dist/index.html`](dist/index.html).
 
-**Live ausprobieren:** <https://ecmbenjamin.github.io/dsar-regel-engine/app/> · **Projektseite:** <https://ecmbenjamin.github.io/dsar-regel-engine/>
+**Live ausprobieren:** <https://ecmbenjamin.github.io/dsar-regel-engine/app/> · **Projektseite:** <https://ecmbenjamin.github.io/dsar-regel-engine/> ([English](https://ecmbenjamin.github.io/dsar-regel-engine/en/))
 
 [![Tests](https://github.com/ECMBenjamin/dsar-regel-engine/actions/workflows/test.yml/badge.svg)](https://github.com/ECMBenjamin/dsar-regel-engine/actions/workflows/test.yml)
 

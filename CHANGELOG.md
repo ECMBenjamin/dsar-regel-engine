@@ -2,6 +2,15 @@
 
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen nach [SemVer](https://semver.org/lang/de/).
 
+## [8.4.1] – 2026-11-15
+
+### Geändert
+- Projektseite ruhiger gestaltet (weniger Kästen, gemeinsames Stylesheet `docs/assets/site.css`).
+
+### Hinzugefügt
+- Englische Projektseite `docs/en/index.html` mit Sprachumschalter DE/EN.
+- `CHECKLISTE.md` mit allen offenen Schritten bis zur Veröffentlichung.
+
 ## [8.4.0] – 2026-11-15
 
 ### Hinzugefügt

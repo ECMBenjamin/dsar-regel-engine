@@ -9,238 +9,165 @@
     <meta property="og:title" content="DSAR Regel-Engine">
     <meta property="og:description" content="Regeln als Daten, eine Engine, die sie ausführt, und Dokumente, die erst nach Freigabe entstehen. 100 % lokal im Browser.">
     <meta property="og:type" content="website">
+    <link rel="alternate" hreflang="de" href="https://ecmbenjamin.github.io/dsar-regel-engine/">
+    <link rel="alternate" hreflang="en" href="https://ecmbenjamin.github.io/dsar-regel-engine/en/">
+    <link rel="stylesheet" href="assets/site.css">
     <!--
-        Projektseite der DSAR Regel-Engine (GitHub Pages, Ordner /docs).
-        Die Anwendung selbst liegt unter app/index.html und wird von build.js dorthin kopiert.
+        Projektseite der DSAR Regel-Engine (GitHub Pages, Ordner /docs), deutsche Fassung.
+        Englische Fassung: en/index.html. Die Anwendung liegt unter app/index.html (build.js kopiert sie).
         @author benthy
         @license MIT
     -->
-    <style>
-        :root {
-            --primary: #1a3d6b; --primary-hover: #122b4d; --bg: #FBFBFB; --surface: #FFFFFF; --border: #E5E7EB;
-            --text: #111827; --muted: #4B5563; --success: #15803D; --success-bg: #DCFCE7; --warning: #B45309; --warning-bg: #FEF3C7;
-            --danger: #B91C1C; --danger-bg: #FEE2E2; --radius: 8px;
-            --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-        }
-        * { box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
-        @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-        body { margin: 0; font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.65; -webkit-font-smoothing: antialiased; }
-        a { color: var(--primary); font-weight: 500; }
-        a:focus-visible, .btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
-        .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
-        .narrow { max-width: 720px; }
-
-        .topbar { border-bottom: 1px solid var(--border); background: var(--surface); }
-        .topbar .wrap { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding-top: 14px; padding-bottom: 14px; }
-        .brand { font-weight: 600; color: var(--primary); letter-spacing: -0.01em; text-decoration: none; }
-        .topnav { display: flex; gap: 20px; flex-wrap: wrap; font-size: 0.92rem; }
-        .topnav a { text-decoration: none; color: var(--muted); }
-        .topnav a:hover { color: var(--primary); }
-
-        .hero { padding: 72px 0 56px; }
-        .eyebrow { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--primary); margin: 0 0 14px; }
-        h1 { font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.12; letter-spacing: -0.03em; color: var(--primary); margin: 0 0 20px; max-width: 16ch; }
-        .lead { font-size: 1.15rem; color: var(--muted); max-width: 62ch; margin: 0 0 28px; }
-        .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
-        .btn { display: inline-flex; align-items: center; padding: 12px 22px; border-radius: var(--radius); font-weight: 600; font-size: 0.98rem; text-decoration: none; border: 1px solid transparent; transition: background-color 0.2s, border-color 0.2s; }
-        .btn-primary { background: var(--primary); color: #fff; }
-        .btn-primary:hover { background: var(--primary-hover); }
-        .btn-outline { border-color: var(--border); color: var(--text); background: var(--surface); }
-        .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
-        .facts { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0; list-style: none; }
-        .facts li { font-family: var(--mono); font-size: 0.76rem; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; }
-
-        section { padding: 56px 0; border-top: 1px solid var(--border); }
-        h2 { font-size: 1.6rem; letter-spacing: -0.02em; color: var(--primary); margin: 0 0 12px; }
-        h3 { font-size: 1.05rem; color: var(--primary); margin: 0 0 8px; }
-        .intro { color: var(--muted); max-width: 66ch; margin: 0 0 32px; }
-        p { margin: 0 0 14px; }
-
-        .pipeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
-        .pipeline li { background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--primary); border-radius: var(--radius); padding: 18px; font-size: 0.92rem; color: var(--muted); counter-increment: step; }
-        .pipeline li::before { content: "0" counter(step); display: block; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; margin-bottom: 6px; }
-        .pipeline strong { display: block; color: var(--primary); font-size: 1rem; margin-bottom: 4px; }
-        .chips { margin-top: 20px; font-size: 0.92rem; color: var(--muted); }
-        .chip { display: inline-block; font-family: var(--mono); font-size: 0.76rem; font-weight: 600; border-radius: 999px; padding: 2px 10px; margin-right: 4px; }
-        .chip-ok { background: var(--success-bg); color: var(--success); }
-        .chip-review { background: var(--warning-bg); color: var(--warning); }
-        .chip-block { background: var(--danger-bg); color: var(--danger); }
-
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; }
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
-        .card p { color: var(--muted); font-size: 0.95rem; margin-bottom: 0; }
-        .card p + p { margin-top: 10px; }
-        .card .tag { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); display: block; margin-bottom: 8px; }
-
-        .why { display: grid; gap: 28px; }
-        .why article { border-left: 3px solid var(--primary); padding-left: 20px; }
-        .why p { color: var(--muted); margin-bottom: 0; }
-
-        .limits { background: var(--warning-bg); border-left: 4px solid var(--warning); border-radius: 0 var(--radius) var(--radius) 0; padding: 20px 24px; color: #7c4a03; }
-        .limits ul { margin: 0; padding-left: 20px; }
-        .limits li { margin-bottom: 8px; }
-        .limits li:last-child { margin-bottom: 0; }
-
-        pre { font-family: var(--mono); font-size: 0.85rem; background: #0f172a; color: #e2e8f0; border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; margin: 0 0 16px; }
-        code { font-family: var(--mono); font-size: 0.88em; }
-        ul.plain { padding-left: 20px; color: var(--muted); }
-        ul.plain li { margin-bottom: 8px; }
-
-        footer { border-top: 1px solid var(--border); padding: 28px 0 40px; font-size: 0.88rem; color: var(--muted); }
-        footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-
-        @media (max-width: 860px) { .pipeline { grid-template-columns: 1fr 1fr; } }
-        @media (max-width: 520px) { .pipeline { grid-template-columns: 1fr; } .hero { padding: 48px 0 40px; } section { padding: 44px 0; } }
-    </style>
 </head>
 <body>
     <header class="topbar">
         <div class="wrap">
             <a class="brand" href="#top">DSAR Regel-Engine</a>
             <nav class="topnav" aria-label="Seitennavigation">
-                <a href="#funktion">Funktion</a>
-                <a href="#warum">Warum so gebaut</a>
-                <a href="#grenzen">Grenzen</a>
-                <a href="#mitmachen">Mitmachen</a>
+                <a class="hide-sm" href="#funktion">Funktion</a>
+                <a class="hide-sm" href="#warum">Warum so gebaut</a>
+                <a class="hide-sm" href="#grenzen">Grenzen</a>
                 <a href="https://github.com/ECMBenjamin/dsar-regel-engine">GitHub</a>
+                <span class="lang" aria-label="Sprache"><span aria-current="true">DE</span><a href="en/" hreflang="en" lang="en">EN</a></span>
             </nav>
         </div>
     </header>
 
     <main id="top">
         <div class="wrap hero">
-            <p class="eyebrow">Powered by Universal Rules Infrastructure</p>
+            <p class="eyebrow">Universal Rules Infrastructure · V1</p>
             <h1>Regeln entscheiden. Aktionen setzen durch.</h1>
             <p class="lead">Die DSAR Regel-Engine führt Schritt für Schritt durch DSGVO-Betroffenenanfragen und Datenpannen. Das Antwortschreiben oder die Meldung entsteht erst, wenn die Engine die Aktion freigibt. Alles läuft in einer einzigen HTML-Datei in Ihrem Browser; es werden keine Daten übertragen.</p>
             <div class="btn-row">
                 <a class="btn btn-primary" href="app/">Im Browser ausprobieren</a>
-                <a class="btn btn-outline" href="https://github.com/ECMBenjamin/dsar-regel-engine">Code auf GitHub</a>
+                <a class="btn btn-ghost" href="https://github.com/ECMBenjamin/dsar-regel-engine">Code auf GitHub</a>
             </div>
-            <ul class="facts" aria-label="Eckdaten">
-                <li>100 % lokal</li>
-                <li>eine HTML-Datei</li>
-                <li>keine Abhängigkeiten</li>
-                <li>MIT-Lizenz</li>
-                <li>keine Rechtsberatung</li>
-            </ul>
+            <p class="facts"><span>100 % lokal</span><span>eine HTML-Datei</span><span>keine Abhängigkeiten</span><span>MIT-Lizenz</span><span>keine Rechtsberatung</span></p>
         </div>
 
         <section id="funktion">
-            <div class="wrap">
-                <h2>Was das Werkzeug macht</h2>
-                <p class="intro">Jeder Vorgang durchläuft dieselben vier Schritte. Die Software schlägt vor, der Mensch bestätigt, die Engine entscheidet.</p>
-                <ol class="pipeline">
-                    <li><strong>Einlesen</strong>E-Mail oder Vorfallbericht einfügen. Ein Parser macht Vorschläge, mehr nicht.</li>
-                    <li><strong>Prüfen</strong>Jede rechtliche Frage wird einzeln per Klick bestätigt, mit Norm und Begründung daneben.</li>
-                    <li><strong>Entscheiden</strong>Die Engine wertet die bestätigten Fakten aus und gibt die Aktion frei, verlangt eine Prüfung oder blockiert.</li>
-                    <li><strong>Ausführen</strong>Erst jetzt entsteht das Dokument. Jeder Schritt landet in einem verketteten Protokoll.</li>
-                </ol>
-                <p class="chips">Mögliche Entscheidungen:
-                    <span class="chip chip-ok">PERMITTED</span>
-                    <span class="chip chip-review">MANUAL_REVIEW</span>
-                    <span class="chip chip-block">BLOCKED</span>
-                </p>
+            <div class="wrap sec">
+                <div class="label">Funktion</div>
+                <div>
+                    <h2>Vier Schritte, immer in derselben Reihenfolge</h2>
+                    <p class="intro">Die Software schlägt vor, der Mensch bestätigt, die Engine entscheidet.</p>
+                    <ol class="pipeline">
+                        <li><strong>Einlesen</strong>E-Mail oder Vorfallbericht einfügen. Ein Parser macht Vorschläge, mehr nicht.</li>
+                        <li><strong>Prüfen</strong>Jede rechtliche Frage wird einzeln per Klick bestätigt, mit Norm und Begründung daneben.</li>
+                        <li><strong>Entscheiden</strong>Die Engine wertet die bestätigten Fakten aus und gibt die Aktion frei, verlangt eine Prüfung oder blockiert.</li>
+                        <li><strong>Ausführen</strong>Erst jetzt entsteht das Dokument. Jeder Schritt landet in einem verketteten Protokoll.</li>
+                    </ol>
+                    <p class="note">Mögliche Entscheidungen:
+                        <span class="tag t-ok">PERMITTED</span><span class="tag t-review">MANUAL_REVIEW</span><span class="tag t-block">BLOCKED</span></p>
+                </div>
             </div>
         </section>
 
         <section id="regelwerke">
-            <div class="wrap">
-                <h2>Zwei Regelwerke, eine Engine</h2>
-                <p class="intro">Das Fachliche steckt in Regelwerken, die als reine Daten vorliegen. Die Engine kennt keine DSGVO; sie führt nur aus, was ein Regelwerk beschreibt.</p>
-                <div class="grid">
-                    <div class="card">
-                        <span class="tag">dsar-gdpr-de</span>
-                        <h3>Betroffenenanfragen</h3>
-                        <p>Auskunft (Art. 15), Löschung (Art. 17) und Fristverlängerung (Art. 12 Abs. 3 DSGVO). Ergebnis ist das passende Antwortschreiben, von der Negativauskunft bis zur Vollauskunft mit Datenkopie.</p>
-                    </div>
-                    <div class="card">
-                        <span class="tag">breach-gdpr-de</span>
-                        <h3>Datenpannen</h3>
-                        <p>Meldung an die Aufsichtsbehörde (Art. 33) und Benachrichtigung der Betroffenen (Art. 34 DSGVO). Ergebnis sind Meldungsentwurf, Benachrichtigung und interner Vermerk.</p>
-                    </div>
-                    <div class="card">
-                        <span class="tag">uri.rulebook/v1</span>
-                        <h3>Eigene Regelwerke</h3>
-                        <p>Das Format ist dokumentiert. Eigene Regelwerke lassen sich als JSON importieren; sie bringen ihre Testfälle mit und werden nur aktiviert, wenn alle bestehen.</p>
-                        <p><a href="https://github.com/ECMBenjamin/dsar-regel-engine/blob/main/docs/rulebook-spec.md">Zur Spezifikation</a></p>
-                    </div>
+            <div class="wrap sec">
+                <div class="label">Regelwerke</div>
+                <div>
+                    <h2>Zwei Regelwerke, eine Engine</h2>
+                    <p class="intro">Das Fachliche steckt in Regelwerken, die als reine Daten vorliegen. Die Engine kennt keine DSGVO; sie führt nur aus, was ein Regelwerk beschreibt.</p>
+                    <ul class="rows">
+                        <li>
+                            <span class="id">dsar-gdpr-de</span>
+                            <div><h3>Betroffenenanfragen</h3><p>Auskunft (Art. 15), Löschung (Art. 17) und Fristverlängerung (Art. 12 Abs. 3 DSGVO). Ergebnis ist das passende Antwortschreiben, von der Negativauskunft bis zur Vollauskunft mit Datenkopie.</p></div>
+                        </li>
+                        <li>
+                            <span class="id">breach-gdpr-de</span>
+                            <div><h3>Datenpannen</h3><p>Meldung an die Aufsichtsbehörde (Art. 33) und Benachrichtigung der Betroffenen (Art. 34 DSGVO). Ergebnis sind Meldungsentwurf, Benachrichtigung und interner Vermerk.</p></div>
+                        </li>
+                        <li>
+                            <span class="id">uri.rulebook/v1</span>
+                            <div><h3>Eigene Regelwerke</h3><p>Das Format ist dokumentiert. Eigene Regelwerke lassen sich als JSON importieren; sie bringen ihre Testfälle mit und werden nur aktiviert, wenn alle bestehen. <a href="https://github.com/ECMBenjamin/dsar-regel-engine/blob/main/docs/rulebook-spec.md">Zur Spezifikation</a></p></div>
+                        </li>
+                    </ul>
+                    <p class="note">Dazu kommen ein Fristenrechner mit Feiertagen aller 16 Bundesländer und eine Ansicht, die jede Entscheidung als maschinenlesbares JSON zeigt.</p>
                 </div>
-                <p class="chips">Dazu kommen ein Fristenrechner mit Feiertagen aller 16 Bundesländer und eine Ansicht, die jede Entscheidung als maschinenlesbares JSON zeigt.</p>
             </div>
         </section>
 
         <section id="warum">
-            <div class="wrap narrow">
-                <h2>Warum ich es so gebaut habe</h2>
-                <p class="intro">Hinter dem Werkzeug stehen ein paar Entscheidungen, die ich bewusst getroffen habe. Sie erklären, warum es sich anders verhält als ein Chatbot oder ein Formular.</p>
-                <div class="why">
-                    <article>
-                        <h3>Regeln sind Daten, nicht Code</h3>
-                        <p>Wer prüfen will, was das Werkzeug entscheidet, soll keinen Programmcode lesen müssen. Jede Regel steht als Eintrag mit Frage, Rechtsquelle und Wirkung in einem Regelwerk. Die Engine führt es nur aus. Das Prinzip ist vom Open Policy Agent abgeschaut: Die Entscheidung ist von der Stelle getrennt, die sie durchsetzt. Ein neues Rechtsgebiet ist damit ein neues Regelwerk und kein neues Programm; das zweite Regelwerk kam hinzu, ohne eine Zeile der Engine zu ändern.</p>
-                    </article>
-                    <article>
-                        <h3>Keine KI trifft die Entscheidung</h3>
-                        <p>Bei Rechtsfragen muss dieselbe Eingabe immer zum selben Ergebnis führen, und man muss nachvollziehen können, warum. Deshalb ist die Engine deterministisch. Der Parser liest den Text nur vor und macht Vorschläge; zu einem Fakt wird etwas erst durch einen Klick.</p>
-                    </article>
-                    <article>
-                        <h3>Keine stillen Annahmen</h3>
-                        <p>Solange eine Frage offen ist, bleibt alles gesperrt. Ändert man eine frühere Antwort, werden die davon abhängigen Antworten gelöscht und müssen neu bestätigt werden. Das kostet ein paar Klicks und verhindert, dass ein Schreiben auf einer Annahme beruht, die niemand getroffen hat.</p>
-                    </article>
-                    <article>
-                        <h3>Das Dokument ist der letzte Schritt</h3>
-                        <p>Ein Schreiben entsteht nicht nebenbei, sondern erst nach Freigabe durch die Engine. Bei heiklen Ergebnissen, etwa einer Ablehnung oder einer verspäteten Meldung, verlangt sie zusätzlich die Freigabe durch einen Menschen mit Namen. Diese gilt nur für genau diese Faktenlage.</p>
-                    </article>
-                    <article>
-                        <h3>Alles bleibt auf dem eigenen Rechner</h3>
-                        <p>Betroffenenanfragen und Vorfallberichte enthalten personenbezogene Daten. Ein Werkzeug dafür sollte diese Daten nirgendwohin schicken. Deshalb gibt es keinen Server, kein Konto und keine nachgeladenen Skripte, sondern eine Datei, die man auch ohne Internet öffnen kann.</p>
-                    </article>
-                    <article>
-                        <h3>Ein Protokoll, das seine Grenzen nennt</h3>
-                        <p>Jeder Schritt wird per SHA-256 mit dem vorherigen verkettet; nachträgliche Änderungen fallen auf. Das dient der Rechenschaftspflicht. Es ist keine Garantie gegen gezielte Manipulation im Browser, und das steht auch so im Werkzeug.</p>
-                    </article>
+            <div class="wrap sec">
+                <div class="label">Warum so gebaut</div>
+                <div>
+                    <h2>Sechs Entscheidungen, die ich bewusst getroffen habe</h2>
+                    <p class="intro">Sie erklären, warum sich das Werkzeug anders verhält als ein Chatbot oder ein Formular.</p>
+                    <div class="why">
+                        <article>
+                            <h3>Regeln sind Daten, nicht Code</h3>
+                            <p>Wer prüfen will, was das Werkzeug entscheidet, soll keinen Programmcode lesen müssen. Jede Regel steht als Eintrag mit Frage, Rechtsquelle und Wirkung in einem Regelwerk. Das Prinzip ist vom Open Policy Agent abgeschaut: Die Entscheidung ist von der Stelle getrennt, die sie durchsetzt. Das zweite Regelwerk kam hinzu, ohne eine Zeile der Engine zu ändern.</p>
+                        </article>
+                        <article>
+                            <h3>Keine KI trifft die Entscheidung</h3>
+                            <p>Bei Rechtsfragen muss dieselbe Eingabe immer zum selben Ergebnis führen, und man muss nachvollziehen können, warum. Deshalb ist die Engine deterministisch. Der Parser liest den Text nur vor; zu einem Fakt wird etwas erst durch einen Klick.</p>
+                        </article>
+                        <article>
+                            <h3>Keine stillen Annahmen</h3>
+                            <p>Solange eine Frage offen ist, bleibt alles gesperrt. Ändert man eine frühere Antwort, werden die davon abhängigen Antworten gelöscht und müssen neu bestätigt werden. Das kostet ein paar Klicks und verhindert, dass ein Schreiben auf einer Annahme beruht, die niemand getroffen hat.</p>
+                        </article>
+                        <article>
+                            <h3>Das Dokument ist der letzte Schritt</h3>
+                            <p>Ein Schreiben entsteht nicht nebenbei, sondern erst nach Freigabe durch die Engine. Bei heiklen Ergebnissen, etwa einer Ablehnung oder einer verspäteten Meldung, verlangt sie zusätzlich die Freigabe durch einen Menschen mit Namen. Diese gilt nur für genau diese Faktenlage.</p>
+                        </article>
+                        <article>
+                            <h3>Alles bleibt auf dem eigenen Rechner</h3>
+                            <p>Betroffenenanfragen und Vorfallberichte enthalten personenbezogene Daten. Deshalb gibt es keinen Server, kein Konto und keine nachgeladenen Skripte, sondern eine Datei, die man auch ohne Internet öffnen kann.</p>
+                        </article>
+                        <article>
+                            <h3>Ein Protokoll, das seine Grenzen nennt</h3>
+                            <p>Jeder Schritt wird per SHA-256 mit dem vorherigen verkettet; nachträgliche Änderungen fallen auf. Das dient der Rechenschaftspflicht. Es ist keine Garantie gegen gezielte Manipulation im Browser, und das steht auch so im Werkzeug.</p>
+                        </article>
+                    </div>
                 </div>
             </div>
         </section>
 
         <section id="grenzen">
-            <div class="wrap narrow">
-                <h2>Was es nicht ist</h2>
-                <p class="intro">Ein Rechtswerkzeug sollte offen sagen, wo es aufhört.</p>
-                <div class="limits">
-                    <ul>
+            <div class="wrap sec">
+                <div class="label">Grenzen</div>
+                <div>
+                    <h2>Was es nicht ist</h2>
+                    <p class="intro">Ein Rechtswerkzeug sollte offen sagen, wo es aufhört.</p>
+                    <ul class="plain">
                         <li><strong>Keine Rechtsberatung.</strong> Das Werkzeug ist ein Workflow-Assistent. Die Regelwerke sind noch nicht von einer Fachanwältin oder einem Datenschutzbeauftragten abgenommen.</li>
                         <li><strong>Quellen in Arbeit.</strong> Die kurzen Normtext-Auszüge sind noch nicht wörtlich gegen die Originale abgeglichen; zwei Fundstellen der Fallbeispiele sind im Werkzeug als ungeprüft markiert.</li>
                         <li><strong>Risikowerte sind gesetzt.</strong> Die Faktoren und Schwellen sind begründete Annahmen, keine hergeleiteten Größen.</li>
                         <li><strong>Fristen sind Orientierungswerte.</strong> Ob BGB oder VO 1182/71 gilt, ist im Detail umstritten.</li>
                         <li><strong>Vorgänge werden nicht gespeichert.</strong> Nach dem Neuladen ist die Sitzung weg; exportieren Sie, was Sie brauchen.</li>
+                        <li><strong>Nur auf Deutsch.</strong> Die Anwendung und die Regelwerke sind deutsch; eine englische Fassung ist geplant.</li>
                     </ul>
                 </div>
             </div>
         </section>
 
         <section id="mitmachen">
-            <div class="wrap narrow">
-                <h2>Ausprobieren und mitmachen</h2>
-                <p class="intro">Am schnellsten geht es über die Live-Version. Wer den Code lesen oder ändern will:</p>
-                <pre>git clone https://github.com/ECMBenjamin/dsar-regel-engine.git
+            <div class="wrap sec">
+                <div class="label">Mitmachen</div>
+                <div>
+                    <h2>Ausprobieren und mitmachen</h2>
+                    <p class="intro">Am schnellsten geht es über die Live-Version. Wer den Code lesen oder ändern will:</p>
+                    <pre>git clone https://github.com/ECMBenjamin/dsar-regel-engine.git
 cd dsar-regel-engine
 npm install   # nur für die Tests
 npm test      # baut die Datei und prüft jeden Antwortpfad</pre>
-                <ul class="plain">
-                    <li><strong>Sie sind Juristin oder Datenschutzbeauftragter?</strong> Am meisten hilft ein kritischer Blick auf die Regeln und Textbausteine. Testfälle lassen sich ohne Programmierkenntnisse schreiben; die Spezifikation erklärt, wie.</li>
-                    <li><strong>Sie entwickeln?</strong> Ein eigenes Regelwerk ist der beste Einstieg. Fehler und Ideen bitte als <a href="https://github.com/ECMBenjamin/dsar-regel-engine/issues">Issue</a>.</li>
-                    <li><strong>Als Nächstes geplant:</strong> geprüfte Quellen je Regel, signierte Exporte, lokale Ablage von Vorgängen und eine Schnittstelle, über die KI-Agenten die Engine abfragen, bevor sie handeln.</li>
-                </ul>
+                    <ul class="plain">
+                        <li><strong>Sie sind Juristin oder Datenschutzbeauftragter?</strong> Am meisten hilft ein kritischer Blick auf die Regeln und Textbausteine. Testfälle lassen sich ohne Programmierkenntnisse schreiben; die Spezifikation erklärt, wie.</li>
+                        <li><strong>Sie entwickeln?</strong> Ein eigenes Regelwerk ist der beste Einstieg. Fehler und Ideen bitte als <a href="https://github.com/ECMBenjamin/dsar-regel-engine/issues">Issue</a>.</li>
+                        <li><strong>Als Nächstes geplant:</strong> geprüfte Quellen je Regel, signierte Exporte, lokale Ablage von Vorgängen und eine Schnittstelle, über die KI-Agenten die Engine abfragen, bevor sie handeln.</li>
+                    </ul>
+                </div>
             </div>
         </section>
 
         <section id="ueber">
-            <div class="wrap narrow">
-                <h2>Über das Projekt</h2>
-                <p>Die DSAR Regel-Engine ist ein Projekt von <a href="https://benjaminthyssen.com">Benjamin Thyssen</a>. Sie ist die erste Fassung einer größeren Idee: einer Infrastruktur, in der Regeln versioniert als Daten vorliegen, eine Engine sie nachvollziehbar auswertet und erst ihre Entscheidung eine Handlung freigibt, egal ob ein Mensch oder ein KI-Agent handeln will.</p>
-                <p><a href="https://benjaminthyssen.com">benjaminthyssen.com</a> · <a href="https://github.com/ECMBenjamin">GitHub</a></p>
+            <div class="wrap sec">
+                <div class="label">Über das Projekt</div>
+                <div>
+                    <p>Die DSAR Regel-Engine ist ein Projekt von <a href="https://benjaminthyssen.com">Benjamin Thyssen</a>. Sie ist die erste Fassung einer größeren Idee: einer Infrastruktur, in der Regeln versioniert als Daten vorliegen, eine Engine sie nachvollziehbar auswertet und erst ihre Entscheidung eine Handlung freigibt, egal ob ein Mensch oder ein KI-Agent handeln will.</p>
+                    <p><a href="https://benjaminthyssen.com">benjaminthyssen.com</a> · <a href="https://github.com/ECMBenjamin">GitHub</a></p>
+                </div>
             </div>
         </section>
     </main>
