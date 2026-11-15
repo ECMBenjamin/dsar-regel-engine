@@ -63,5 +63,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const html = build();
     mkdirSync(join(root, 'dist'), { recursive: true });
     writeFileSync(join(root, 'dist/index.html'), html);
+    // Kopie für die Projektseite (GitHub Pages aus /docs): dort läuft die Anwendung unter app/.
+    mkdirSync(join(root, 'docs/app'), { recursive: true });
+    writeFileSync(join(root, 'docs/app/index.html'), html);
     console.log(`dist/index.html geschrieben (${html.split('\n').length} Zeilen, ${Buffer.byteLength(html)} Bytes)`);
 }

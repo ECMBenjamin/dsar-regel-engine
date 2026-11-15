@@ -486,7 +486,18 @@ test('Build ist reproduzierbar und enthält keine Modul-Anweisungen', async () =
     const { build } = await import('../build.js');
     const html = build();
     assert.equal(html, readDist());
+    assert.equal(readFileSync(new URL('../docs/app/index.html', import.meta.url), 'utf8'), html);
     assert.equal(html, build());
     assert.doesNotMatch(html, /^\s*(import|export)\s/m);
     assert.doesNotMatch(html, /<script[^>]+src=|<link[^>]+href=|https?:\/\/(?!schema\.org|opensource\.org)/);
+});
+
+test('Projektseite lädt nichts von außen und verlinkt die Anwendung', () => {
+    const page = readFileSync(new URL('../docs/index.html', import.meta.url), 'utf8');
+    assert.doesNotMatch(page, /<script|<link[^>]+href=|<img|@import|url\(/i);
+    assert.match(page, /href="app\/"/);
+    assert.match(page, /href="https:\/\/benjaminthyssen\.com"/);
+    assert.match(page, /keine Rechtsberatung/i);
+    const anchors = [...page.matchAll(/href="#([a-z-]+)"/g)].map(m => m[1]);
+    for (const a of anchors) assert.ok(page.includes(`id="${a}"`), a);
 });

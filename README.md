@@ -15,11 +15,15 @@ Beide Packs laufen auf derselben Engine. Das zweite Pack kam hinzu, ohne die Eng
 
 Ausgeliefert wird eine einzige HTML-Datei ohne Abhängigkeiten, die vollständig offline im Browser läuft: [`dist/index.html`](dist/index.html).
 
+**Live ausprobieren:** <https://ecmbenjamin.github.io/dsar-regel-engine/app/> · **Projektseite:** <https://ecmbenjamin.github.io/dsar-regel-engine/>
+
+[![Tests](https://github.com/ECMBenjamin/dsar-regel-engine/actions/workflows/test.yml/badge.svg)](https://github.com/ECMBenjamin/dsar-regel-engine/actions/workflows/test.yml)
+
 > Workflow-Assistent, keine Rechtsberatung.
 
 ## Benutzen
 
-`dist/index.html` im Browser öffnen. Es wird nichts installiert und nichts übertragen.
+Die Live-Version öffnen oder `dist/index.html` herunterladen und im Browser öffnen. Es wird nichts installiert und nichts übertragen.
 
 ## Aufbau
 
@@ -63,7 +67,7 @@ npm run build   # erzeugt dist/index.html aus src/
 npm test        # baut und führt alle Tests aus
 ```
 
-Der Build ist ein kurzes Skript ohne Bundler (`build.js`): Die Module werden in fester Reihenfolge zusammengefügt. `dist/index.html` wird nicht von Hand bearbeitet.
+Der Build ist ein kurzes Skript ohne Bundler (`build.js`): Die Module werden in fester Reihenfolge zusammengefügt. `dist/index.html` wird nicht von Hand bearbeitet. Der Build legt dieselbe Datei als `docs/app/index.html` ab; `docs/` ist die Projektseite (GitHub Pages).
 
 ## Grenzen
 

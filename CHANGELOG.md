@@ -2,6 +2,12 @@
 
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen nach [SemVer](https://semver.org/lang/de/).
 
+## [8.4.0] – 2026-11-15
+
+### Hinzugefügt
+- Projektseite `docs/index.html` für GitHub Pages; die Anwendung läuft dort unter `app/`.
+- Automatischer Testlauf bei jedem Push (GitHub Actions).
+
 ## [8.3.0] – 2026-11-14
 
 ### Hinzugefügt
