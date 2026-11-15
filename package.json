@@ -1,6 +1,6 @@
 {
   "name": "dsar-regel-engine",
-  "version": "8.4.1",
+  "version": "8.4.2",
   "description": "DSAR Regel-Engine – V1 der Universal Rules Infrastructure. Deterministische Regel-Engine für DSGVO-Betroffenenanfragen und Datenpannen, ausgeliefert als eine abhängigkeitsfreie HTML-Datei.",
   "author": "benthy",
   "license": "MIT",

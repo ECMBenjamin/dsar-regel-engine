@@ -2,6 +2,11 @@
 
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionen nach [SemVer](https://semver.org/lang/de/).
 
+## [8.4.2] – 2026-11-15
+
+### Geändert
+- Projektseite (DE/EN) übernimmt das Designsystem der Anwendung, damit Projektseite und Demo gleich aussehen; „Demo öffnen“ steht als erster Reiter.
+
 ## [8.4.1] – 2026-11-15
 
 ### Geändert
